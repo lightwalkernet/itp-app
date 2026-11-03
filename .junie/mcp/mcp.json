@@ -1,0 +1,11 @@
+{
+    "mcpServers": {
+        "laravel-boost": {
+            "command": "/Users/lightwalker/Library/Application Support/Herd/bin/php84",
+            "args": [
+                "/Users/lightwalker/creations/websites/itp-app/artisan",
+                "boost:mcp"
+            ]
+        }
+    }
+}
