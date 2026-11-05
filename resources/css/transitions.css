@@ -1,0 +1,108 @@
+/*
+ * Page transitions (platform.md §8), ported from the itpinterface spike.
+ * Slides run on the mobile build only (html.is-native); the web build swaps pages with no animation.
+ * transitions.js reads these custom properties too, so there is one place to tune them.
+ */
+:root {
+    --page-duration: 450ms;
+    --page-easing: cubic-bezier(.2, .8, .2, 1);
+    --tabbar-height: 56px;
+    --player-height: 0px;
+    --page-surface: var(--color-stone-50);
+}
+
+/* Double-tap zoom off, pinch-zoom kept. The web view's default double-tap zoom fires on rapid taps. */
+html { touch-action: manipulation; }
+
+/* A swiped page must not widen the document, or the view transition aborts ("Viewport size changed").
+   Clipping on <html> too stops body's overflow propagating to the viewport, so body does the clipping.
+   A stable gutter keeps the viewport the same width whether or not the next page scrolls. */
+:root:has(> .app-body) { overflow-x: clip; scrollbar-gutter: stable; }
+
+.app-body {
+    overscroll-behavior-x: none;
+    overflow-x: clip;
+}
+
+.app-page {
+    min-height: 100dvh;
+    padding-top: env(safe-area-inset-top);
+    background: var(--page-surface);
+    box-sizing: border-box;
+}
+
+.app-page--with-tabs {
+    padding-bottom: calc(var(--tabbar-height) + var(--player-height) + env(safe-area-inset-bottom));
+}
+
+.app-player {
+    view-transition-name: player;
+    position: fixed;
+    inset: auto 0 calc(var(--tabbar-height) + env(safe-area-inset-bottom)) 0;
+    height: var(--player-height);
+}
+
+.app-tabbar {
+    view-transition-name: tabbar;
+    position: fixed;
+    inset: auto 0 0 0;
+    display: flex;
+    padding-bottom: env(safe-area-inset-bottom);
+}
+.app-tabbar a { flex: 1; line-height: var(--tabbar-height); text-align: center; }
+
+/* Static copy of the previous page, beside the page being swiped away (see app-in-left) */
+.app-underlay {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    padding-top: env(safe-area-inset-top);
+    background: var(--page-surface);
+    transform: translateX(-100%);
+}
+
+html.is-swiping .app-page { box-shadow: -8px 0 24px rgb(0 0 0 / .25); }
+
+/* ---------- View transitions (mobile build only) ---------- */
+
+/* Nothing outside named elements cross-fades. */
+::view-transition-old(root),
+::view-transition-new(root) { animation: none; }
+
+::view-transition-group(tabbar),
+::view-transition-group(player) { animation: none; z-index: 2; }
+
+/*
+ * transitions.js names the outgoing page "page-out" and the incoming one "page-in". As separate groups,
+ * each keeps its own on-screen position (scroll, swipe offset) instead of being morphed between the two.
+ */
+html.is-native::view-transition-old(page-out),
+html.is-native::view-transition-new(page-in) {
+    animation-duration: var(--page-duration);
+    animation-timing-function: var(--page-easing);
+    animation-fill-mode: both;
+}
+
+/*
+ * Forward: the new page pushes in from the right and the old one is pushed off to the left.
+ * A push, not the iOS parallax: on a see-through page a parallaxed old page shows through as a grey panel.
+ */
+html.is-native[data-nav-direction="forward"]::view-transition-old(page-out) { animation-name: app-out-left; }
+html.is-native[data-nav-direction="forward"]::view-transition-new(page-in) { animation-name: app-in-right; }
+html[data-nav-direction="forward"]::view-transition-group(page-in) { z-index: 1; }
+
+/* Back: the old page slides off to the right (its group already starts where the finger released it).
+   After a swipe, --swipe-duration shortens it to the distance left to travel. */
+html.is-native[data-nav-direction="back"]::view-transition-old(page-out),
+html.is-native[data-nav-direction="back"]::view-transition-new(page-in) {
+    animation-duration: var(--swipe-duration, var(--page-duration));
+}
+html.is-native[data-nav-direction="back"]::view-transition-old(page-out) { animation-name: app-out-right; }
+html.is-native[data-nav-direction="back"]::view-transition-new(page-in) { animation-name: app-in-left; }
+html[data-nav-direction="back"]::view-transition-group(page-out) { z-index: 1; }
+
+@keyframes app-out-left  { to   { transform: translateX(-100%); } }
+@keyframes app-in-right  { from { transform: translateX(100%); } }
+@keyframes app-out-right { to   { transform: translateX(calc(100% - var(--swipe-from, 0px))); } }
+@keyframes app-in-left   { from { transform: translateX(var(--under-from, -100%)); } }
