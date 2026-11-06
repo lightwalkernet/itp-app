@@ -92,7 +92,7 @@ it('writes the API\'s user row to the phone, then signs in', function () {
         ->and($user->sync_dirty)->toBeFalse()
         ->and($user->updated_at->toIso8601String())->toBe('2026-11-06T05:57:00+00:00');
     $this->assertAuthenticatedAs($user);
-    expect($this->keychain->items)->toBe(['itp.api_token' => '1|secret']);
+    expect($this->keychain->items)->toBe(['itp.api_token' => '1|secret', 'itp.user_id' => $id]);
     Http::assertSent(fn (Request $request) => str_starts_with($request['device_name'], 'Mobile: '));
 });
 
@@ -133,7 +133,7 @@ it('wipes the user\'s rows and token from the phone on sign-out', function () {
     Http::fake(['api.itp.test/v1/auth/logout' => Http::response(['message' => 'Signed out.', 'data' => (object) [], 'errors' => (object) []])]);
     $user = User::factory()->create();
     Itp::factory()->for($user)->create();
-    $this->keychain->items['itp.api_token'] = '1|secret';
+    $this->keychain->items = ['itp.api_token' => '1|secret', 'itp.user_id' => $user->id];
 
     $this->actingAs($user)->post(route('sign-out'))->assertRedirect(route('sign-in'));
 
@@ -141,4 +141,45 @@ it('wipes the user\'s rows and token from the phone on sign-out', function () {
     expect($this->keychain->items)->toBe([])
         ->and(User::withTrashed()->count())->toBe(0)
         ->and(Itp::withTrashed()->count())->toBe(0);
+});
+
+it('stays signed in from the keychain when the session is gone', function () {
+    $user = User::factory()->create();
+    $this->keychain->items = ['itp.api_token' => '1|secret', 'itp.user_id' => $user->id];
+
+    $this->get(route('home'))->assertOk();
+    $this->assertAuthenticatedAs($user);
+
+    $this->get(route('sign-in'))->assertRedirect(route('home'));
+});
+
+it('asks for sign-in again when the keychain\'s user is no longer on the phone', function () {
+    $this->keychain->items = ['itp.api_token' => '1|secret', 'itp.user_id' => strtolower((string) Str::ulid())];
+
+    $this->get(route('home'))->assertRedirect(route('sign-in'));
+
+    $this->assertGuest();
+    expect($this->keychain->items)->toBe([]);
+});
+
+it('needs both the token and the user to restore a sign-in', function (array $keychain) {
+    $user = User::factory()->create();
+    $this->keychain->items = array_map(fn (string $value) => $value === 'user' ? $user->id : $value, $keychain);
+
+    $this->get(route('home'))->assertRedirect(route('sign-in'));
+
+    $this->assertGuest();
+})->with([
+    'no token' => [['itp.user_id' => 'user']],
+    'no user' => [['itp.api_token' => '1|secret']],
+]);
+
+it('never restores a sign-in from the keychain on the web build', function () {
+    config(['itp.runtime' => 'server', 'sync.role' => 'server']);
+    $user = User::factory()->create();
+    $this->keychain->items = ['itp.api_token' => '1|secret', 'itp.user_id' => $user->id];
+
+    $this->get(route('home'))->assertRedirect(route('sign-in'));
+
+    $this->assertGuest();
 });

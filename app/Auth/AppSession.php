@@ -17,6 +17,7 @@ use LogicException;
  * The web build shares itp-server's database, so the API has already written the user row.
  * The phone has its own SQLite file, so the row the API returns is written there first. Both
  * then sign into their own session against that row and keep the token for later API calls.
+ * The phone also keeps the user's id in the keychain, so it stays signed in until sign-out.
  */
 class AppSession
 {
@@ -28,6 +29,7 @@ class AppSession
     public function __construct(
         protected AuthClient $auth,
         protected TokenStore $tokens,
+        protected DeviceAccount $device,
     ) {}
 
     /**
@@ -42,7 +44,37 @@ class AppSession
 
         $this->tokens->put($signIn->token);
 
+        if (Runtime::isMobile()) {
+            $this->device->remember($user->id);
+        }
+
         return $user;
+    }
+
+    /**
+     * Sign the phone back in from the keychain. Clears the keychain when its user is no longer
+     * on the phone, e.g. after the app was deleted and reinstalled (iOS keeps keychain items).
+     */
+    public function restore(): bool
+    {
+        $userId = $this->device->userId();
+
+        if ($userId === null || $this->tokens->get() === null) {
+            return false;
+        }
+
+        $user = User::find($userId);
+
+        if ($user === null) {
+            $this->tokens->forget();
+            $this->device->forget();
+
+            return false;
+        }
+
+        Auth::login($user);
+
+        return true;
     }
 
     /**
@@ -93,6 +125,8 @@ class AppSession
         session()->regenerateToken();
 
         if (Runtime::isMobile()) {
+            $this->device->forget();
+
             app(SyncClient::class)->signOut();
         }
     }
