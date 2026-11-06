@@ -4,13 +4,15 @@ namespace App\Livewire\Concerns;
 
 use App\Api\Exceptions\ApiUnavailable;
 use App\Api\Exceptions\AppUpdateRequired;
+use App\Api\Exceptions\NotFound;
 use App\Api\Exceptions\SignedOut;
 use App\Auth\AppSession;
 use Closure;
 
 /**
  * Handles the API outcomes every screen treats the same way. Validation errors from the API are
- * left to Livewire, which shows them on the matching fields.
+ * left to Livewire, which shows them on the matching fields. A 404 (someone else's record) is a
+ * 404 here too.
  */
 trait CallsApi
 {
@@ -30,6 +32,8 @@ trait CallsApi
         } catch (SignedOut) {
             app(AppSession::class)->endLocally();
             $this->redirectRoute('sign-in');
+        } catch (NotFound) {
+            abort(404);
         } catch (ApiUnavailable $exception) {
             $this->addError($errorField, $exception->getMessage());
         }

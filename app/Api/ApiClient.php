@@ -4,6 +4,7 @@ namespace App\Api;
 
 use App\Api\Exceptions\ApiUnavailable;
 use App\Api\Exceptions\AppUpdateRequired;
+use App\Api\Exceptions\NotFound;
 use App\Api\Exceptions\SignedOut;
 use App\Auth\TokenStore;
 use Illuminate\Http\Client\ConnectionException;
@@ -31,12 +32,15 @@ abstract class ApiClient
      * @throws ValidationException for a 422 or 429
      * @throws AppUpdateRequired for a 426
      * @throws SignedOut for a 401
+     * @throws NotFound for a 404
      * @throws ApiUnavailable when the API can't be reached or fails
      */
     protected function send(string $method, string $uri, array $payload = [], bool $authenticated = false, string $errorField = 'form'): array
     {
+        $options = $method === 'GET' ? ['query' => $payload] : ['json' => $payload];
+
         try {
-            $response = $this->request($authenticated)->send($method, $uri, ['json' => $payload]);
+            $response = $this->request($authenticated)->send($method, $uri, $options);
         } catch (ConnectionException $exception) {
             throw new ApiUnavailable($exception);
         }
@@ -45,6 +49,7 @@ abstract class ApiClient
             $response->successful() => (array) $response->json('data', []),
             $response->status() === 426 => throw new AppUpdateRequired($response->json('data.min_app_version')),
             $response->status() === 401 => throw new SignedOut,
+            $response->status() === 404 => throw new NotFound,
             in_array($response->status(), [422, 429], true) => throw $this->validationException($response, $errorField),
             default => throw new ApiUnavailable,
         };

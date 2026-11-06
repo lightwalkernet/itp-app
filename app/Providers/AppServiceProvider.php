@@ -6,9 +6,11 @@ use App\Auth\SecureStorageTokenStore;
 use App\Auth\SessionTokenStore;
 use App\Auth\TokenStore;
 use App\Support\Runtime;
+use App\Sync\ApiServerEndpoint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 use Itp\Core\ItpCoreServiceProvider;
+use Lightwalker\Sync\Client\ServerEndpoint;
 use Lightwalker\Sync\SyncServiceProvider;
 use Native\Mobile\Runtime as NativeRuntime;
 
@@ -16,6 +18,8 @@ class AppServiceProvider extends ServiceProvider
 {
     /**
      * Register any application services.
+     *
+     * The sync client talks to itp-server's API. Only the phone runs it (App\Sync\SyncNow).
      */
     public function register(): void
     {
@@ -24,6 +28,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(TokenStore::class, fn ($app): TokenStore => Runtime::isMobile()
             ? $app->make(SecureStorageTokenStore::class)
             : $app->make(SessionTokenStore::class));
+
+        $this->app->bind(ServerEndpoint::class, ApiServerEndpoint::class);
     }
 
     /**

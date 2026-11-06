@@ -4,7 +4,10 @@ use App\Http\Controllers\SignOutController;
 use App\Http\Middleware\EnsureProfileIsComplete;
 use App\Livewire\Account;
 use App\Livewire\CompleteProfile;
+use App\Livewire\CreateItp;
 use App\Livewire\Home;
+use App\Livewire\ShowGeneration;
+use App\Livewire\ShowItp;
 use App\Livewire\SignIn;
 use App\Livewire\UpdateRequired;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +26,10 @@ Route::middleware('auth')->group(function () {
     Route::middleware(EnsureProfileIsComplete::class)->group(function () {
         Route::livewire('/', Home::class)->name('home');
         Route::livewire('account', Account::class)->name('account');
+
+        Route::livewire('itps/create', CreateItp::class)->name('itps.create');
+        Route::livewire('itps/{itp}', ShowItp::class)->name('itps.show');
+        Route::livewire('generations/{generationId}', ShowGeneration::class)->name('generations.show');
     });
 });
 
