@@ -28,6 +28,7 @@ Thumbs.db
 
 # Mobile build: local env, signing credentials and keys (platform.md §3)
 /.env.mobile
+/.env.web
 /.env*.bak
 /credentials
 *.p8
