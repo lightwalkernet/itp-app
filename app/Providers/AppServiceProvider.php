@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 use Itp\Core\ItpCoreServiceProvider;
 use Lightwalker\Sync\SyncServiceProvider;
+use Native\Mobile\Runtime as NativeRuntime;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -31,7 +32,10 @@ class AppServiceProvider extends ServiceProvider
      * The web build runs no migrations: it uses itp-server's MySQL database as it is
      * (platform.md §4). The mobile build builds its own SQLite file from itp-core's shared
      * tables and the sync client's cursors; NativePHP runs `migrate` on the device after each
-     * install. Tests build both schemas in one SQLite database, so either build can be tested.
+     * install. NativePHP keeps one app booted across requests on the phone ("persistent"
+     * mode) and doesn't reset auth, so the signed-in user is forgotten after each request and
+     * loaded fresh from the session on the next. Tests build both schemas in one SQLite
+     * database, so either build can be tested.
      */
     public function boot(): void
     {
@@ -50,6 +54,8 @@ class AppServiceProvider extends ServiceProvider
                 ItpCoreServiceProvider::migrationsPath(),
                 SyncServiceProvider::clientMigrationsPath(),
             ]);
+
+            NativeRuntime::onReset(fn ($app) => $app['auth']->forgetGuards());
         }
 
         Runtime::assertMatchesDatabase(DB::connection()->getDriverName());

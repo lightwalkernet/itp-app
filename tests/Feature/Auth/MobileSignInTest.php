@@ -183,3 +183,30 @@ it('never restores a sign-in from the keychain on the web build', function () {
 
     $this->assertGuest();
 });
+
+it('goes home after a new user saves their first name', function () {
+    $id = strtolower((string) Str::ulid());
+    $user = ['id' => $id, 'email' => 'ann@example.com', 'first_name' => null];
+    Http::fake([
+        'api.itp.test/v1/auth/verify-code' => mobileSignInResponse($user, needsProfile: true),
+        'api.itp.test/v1/auth/complete-profile' => Http::response(['message' => 'Profile updated.', 'errors' => (object) [], 'data' => [
+            'user' => ['first_name' => 'Ann'] + $user,
+            'needs_profile' => false,
+        ]]),
+    ]);
+
+    // One app serves every request, as NativePHP's persistent runtime does on the phone.
+    Livewire::test(SignIn::class)
+        ->set('email', 'ann@example.com')
+        ->set('code', '123456')
+        ->call('verifyCode')
+        ->assertRedirect(route('profile'));
+
+    Livewire::test(CompleteProfile::class)
+        ->set('first_name', 'Ann')
+        ->call('save')
+        ->assertRedirect(route('home'));
+
+    $this->get(route('home'))->assertOk();
+    $this->get(route('profile'))->assertRedirect(route('home'));
+});

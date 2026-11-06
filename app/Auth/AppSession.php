@@ -80,6 +80,7 @@ class AppSession
     /**
      * The local copy of a user row the API returned. On the phone the row is written first,
      * through the model (platform.md §4); `users` is pull-only, so the write is never pushed.
+     * The signed-in user is swapped for the fresh copy, so this request sees the change too.
      *
      * @param  array<string, mixed>  $row  the user as the API returns it
      *
@@ -87,11 +88,24 @@ class AppSession
      */
     public function storeUser(array $row): User
     {
-        if (Runtime::isServer()) {
-            return User::find($row['id'])
-                ?? throw new LogicException("Signed in as user [{$row['id']}], but that row isn't in the database.");
+        $user = Runtime::isServer()
+            ? User::find($row['id']) ?? throw new LogicException("Signed in as user [{$row['id']}], but that row isn't in the database.")
+            : $this->writeUser($row);
+
+        if (Auth::id() === $user->getKey()) {
+            Auth::setUser($user);
         }
 
+        return $user;
+    }
+
+    /**
+     * Write the API's user row to the phone's database.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    protected function writeUser(array $row): User
+    {
         $user = User::withTrashed()->find($row['id']) ?? new User;
 
         $user->forceFill(Arr::only($row, self::USER_COLUMNS));
