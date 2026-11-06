@@ -20,17 +20,19 @@ class SyncNow
     public function __construct(protected TokenStore $tokens) {}
 
     /**
+     * @param  bool  $forceGlobal  also pull shared content (universal ITPs, wildcards) even when
+     *                             its `pull_every` hasn't elapsed, so changes arrive on load
      * @return SyncReport|null null when nothing ran: the web build, signed out, another run in
      *                         progress, or the run failed
      */
-    public function run(): ?SyncReport
+    public function run(bool $forceGlobal = false): ?SyncReport
     {
         if (Runtime::isServer() || Auth::guest() || $this->tokens->get() === null) {
             return null;
         }
 
         try {
-            return app(SyncClient::class)->run();
+            return app(SyncClient::class)->run($forceGlobal);
         } catch (SyncFailed $exception) {
             Log::warning('Sync failed: '.$exception->getMessage(), ['status' => $exception->status]);
 

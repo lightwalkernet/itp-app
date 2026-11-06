@@ -4,6 +4,7 @@ use App\Livewire\Account;
 use App\Livewire\Home;
 use App\Livewire\UpdateRequired;
 use Itp\Core\Models\Itp;
+use Itp\Core\Models\UniversalItp;
 use Itp\Core\Models\User;
 
 beforeEach(function () {
@@ -12,7 +13,7 @@ beforeEach(function () {
 
 it('sends guests to sign in', function (string $route) {
     $this->get(route($route))->assertRedirect(route('sign-in'));
-})->with(['home', 'account', 'profile', 'itps.create']);
+})->with(['account', 'profile', 'itps.create']);
 
 it('sends a user without a first name to the profile screen on every visit', function (string $route) {
     $this->actingAs(User::factory()->withoutFirstName()->create())
@@ -36,6 +37,14 @@ it('greets the user at home, with the tab bar', function () {
 it('links between screens by path, never by absolute URL', function () {
     $user = User::factory()->create();
     $itp = Itp::factory()->for($user)->create();
+    $universal = UniversalItp::factory()->preview()->create();
+    $locked = UniversalItp::factory()->create();
+
+    $this->get(route('home'))
+        ->assertSee('href="/sign-in" data-transition="forward"', escape: false)
+        ->assertSee('href="/universal/'.$universal->slug.'" data-transition="forward"', escape: false)
+        ->assertDontSee('href="'.url('/'), escape: false);
+
     $this->actingAs($user);
 
     $this->get(route('home'))
@@ -43,12 +52,13 @@ it('links between screens by path, never by absolute URL', function () {
         ->assertSee('href="/account" data-transition="tab"', escape: false)
         ->assertSee('href="/itps/create" data-transition="forward"', escape: false)
         ->assertSee('href="/itps/'.$itp->id.'" data-transition="forward"', escape: false)
+        ->assertSee('href="/universal/'.$locked->slug.'" data-transition="forward"', escape: false)
         ->assertDontSee('href="'.url('/'), escape: false);
 
     $this->get(route('account'))
         ->assertSee('action="/sign-out"', escape: false);
 
-    foreach ([route('itps.create'), route('itps.show', $itp)] as $screen) {
+    foreach ([route('itps.create'), route('itps.show', $itp), route('universals.show', $universal)] as $screen) {
         $this->get($screen)
             ->assertSee('href="/" data-transition="back"', escape: false)
             ->assertDontSee('href="'.url('/'), escape: false);

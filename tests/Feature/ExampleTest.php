@@ -1,7 +1,9 @@
 <?php
 
-test('the application sends guests to sign in', function () {
+test('the application opens at home for guests, NativePHP\'s start URL', function () {
+    $this->withoutVite();
+
     $response = $this->get('/');
 
-    $response->assertRedirect(route('sign-in'));
+    $response->assertOk()->assertSee('Sign in or create a free account');
 });

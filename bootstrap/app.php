@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\ApplyContentBundle;
 use App\Http\Middleware\PreventRequestForgeryOnWeb;
 use App\Http\Middleware\RestoreDeviceSignIn;
 use Illuminate\Foundation\Application;
@@ -20,7 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo(fn () => route('home'));
 
         $middleware->web(
-            append: [RestoreDeviceSignIn::class],
+            append: [RestoreDeviceSignIn::class, ApplyContentBundle::class],
             replace: [PreventRequestForgery::class => PreventRequestForgeryOnWeb::class],
         );
         $middleware->appendToPriorityList(StartSession::class, RestoreDeviceSignIn::class);

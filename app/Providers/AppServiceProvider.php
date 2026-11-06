@@ -37,7 +37,8 @@ class AppServiceProvider extends ServiceProvider
      *
      * The web build runs no migrations: it uses itp-server's MySQL database as it is
      * (platform.md §4). The mobile build builds its own SQLite file from itp-core's shared
-     * tables and the sync client's cursors; NativePHP runs `migrate` on the device after each
+     * tables, the sync client's cursors and its own device-only tables (database/migrations/device:
+     * settings, the download queue); NativePHP runs `migrate` on the device after each
      * install. NativePHP keeps one app booted across requests on the phone ("persistent"
      * mode) and doesn't reset auth, so the signed-in user is forgotten after each request and
      * loaded fresh from the session on the next. Tests build both schemas in one SQLite
@@ -50,6 +51,7 @@ class AppServiceProvider extends ServiceProvider
                 ItpCoreServiceProvider::migrationsPath(),
                 SyncServiceProvider::serverMigrationsPath(),
                 SyncServiceProvider::clientMigrationsPath(),
+                database_path('migrations/device'),
             ]);
 
             return;
@@ -59,6 +61,7 @@ class AppServiceProvider extends ServiceProvider
             $this->loadMigrationsFrom([
                 ItpCoreServiceProvider::migrationsPath(),
                 SyncServiceProvider::clientMigrationsPath(),
+                database_path('migrations/device'),
             ]);
 
             NativeRuntime::onReset(fn ($app) => $app['auth']->forgetGuards());

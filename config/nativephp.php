@@ -296,6 +296,8 @@ return [
         'storage/framework/cache',
         'storage/framework/testing',
         'storage/logs/laravel.log',
+        // Audio a development phone or simulator downloaded. Bundled media ships from public/media.
+        'storage/app/media',
     ],
 
     /*

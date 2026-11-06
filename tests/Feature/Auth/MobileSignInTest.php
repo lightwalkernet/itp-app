@@ -156,7 +156,7 @@ it('stays signed in from the keychain when the session is gone', function () {
 it('asks for sign-in again when the keychain\'s user is no longer on the phone', function () {
     $this->keychain->items = ['itp.api_token' => '1|secret', 'itp.user_id' => strtolower((string) Str::ulid())];
 
-    $this->get(route('home'))->assertRedirect(route('sign-in'));
+    $this->get(route('account'))->assertRedirect(route('sign-in'));
 
     $this->assertGuest();
     expect($this->keychain->items)->toBe([]);
@@ -166,7 +166,7 @@ it('needs both the token and the user to restore a sign-in', function (array $ke
     $user = User::factory()->create();
     $this->keychain->items = array_map(fn (string $value) => $value === 'user' ? $user->id : $value, $keychain);
 
-    $this->get(route('home'))->assertRedirect(route('sign-in'));
+    $this->get(route('account'))->assertRedirect(route('sign-in'));
 
     $this->assertGuest();
 })->with([
@@ -179,7 +179,7 @@ it('never restores a sign-in from the keychain on the web build', function () {
     $user = User::factory()->create();
     $this->keychain->items = ['itp.api_token' => '1|secret', 'itp.user_id' => $user->id];
 
-    $this->get(route('home'))->assertRedirect(route('sign-in'));
+    $this->get(route('account'))->assertRedirect(route('sign-in'));
 
     $this->assertGuest();
 });

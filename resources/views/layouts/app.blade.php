@@ -19,7 +19,12 @@
     @persist('tabbar')
         <nav class="app-tabbar border-t border-stone-200 bg-white text-sm text-stone-500" aria-label="Main">
             <a href="{{ route('home', absolute: false) }}" data-transition="tab" data-tab-match="/" class="aria-[current=page]:font-semibold aria-[current=page]:text-stone-900">Home</a>
-            <a href="{{ route('account', absolute: false) }}" data-transition="tab" data-tab-match="/account" class="aria-[current=page]:font-semibold aria-[current=page]:text-stone-900">Account</a>
+            {{-- Signing in or out is a full page load, so the persisted bar is rebuilt for the new state. --}}
+            @auth
+                <a href="{{ route('account', absolute: false) }}" data-transition="tab" data-tab-match="/account" class="aria-[current=page]:font-semibold aria-[current=page]:text-stone-900">Account</a>
+            @else
+                <a href="{{ route('sign-in', absolute: false) }}" data-transition="forward">Sign in</a>
+            @endauth
         </nav>
     @endpersist
 </body>

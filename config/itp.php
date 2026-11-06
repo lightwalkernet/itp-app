@@ -30,4 +30,30 @@ return [
 
     'version' => env('ITP_APP_VERSION', '0.1.0'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Media
+    |--------------------------------------------------------------------------
+    |
+    | Where universal audio and images live: R2 behind a public custom domain.
+    | Rows hold object keys (e.g. media/audio/universals/...); a key is
+    | fetched from this host unless the app bundles the file in public/.
+    |
+    */
+
+    'media_url' => env('ITP_MEDIA_URL', 'https://itp.numinous.fun'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Content bundle
+    |--------------------------------------------------------------------------
+    |
+    | The universal ITPs and wildcards exported by itp-server, shipped with
+    | the mobile build so they show offline and before sign-in. The phone
+    | applies it whenever the file changes (App\Content\ContentBundle).
+    |
+    */
+
+    'content_bundle' => resource_path('content/snapshot.json'),
+
 ];

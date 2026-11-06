@@ -123,3 +123,29 @@ function syncPullResponder(array $recordsByType): Closure
         ]]);
     };
 }
+
+/**
+ * The test content snapshot, in the format itp-server's `itp:export-content-snapshot` writes.
+ *
+ * @return array{generated_at: string, types: array<string, list<array<string, mixed>>>}
+ */
+function contentSnapshot(): array
+{
+    return json_decode(file_get_contents(base_path('tests/Fixtures/content/snapshot.json')), true, flags: JSON_THROW_ON_ERROR);
+}
+
+/**
+ * Write a snapshot as the app's content bundle and point the app at it.
+ *
+ * @param  array<string, mixed>  $snapshot
+ * @param  string|null  $path  rewrite an earlier bundle in place
+ */
+function useContentBundle(array $snapshot, ?string $path = null): string
+{
+    $path ??= tempnam(sys_get_temp_dir(), 'itp-content-');
+
+    file_put_contents($path, json_encode($snapshot, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    config(['itp.content_bundle' => $path]);
+
+    return $path;
+}

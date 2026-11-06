@@ -1,0 +1,79 @@
+{
+    "generated_at": "2026-11-06T23:45:08Z",
+    "types": {
+        "universal_itps": [
+            {
+                "id": "01m6skvqm3ddj4z6bqn2dydy0m",
+                "deleted_at": null,
+                "slug": "awaken-wonder",
+                "kind": "universal",
+                "sort_order": 1,
+                "title": "Light Up Your Life",
+                "description": "About Awaken Wonder.",
+                "image_path": "media/images/universals/original/1-awaken-wonder.webp",
+                "attunement_text": "Beloved Awaken Wonder\nLine two\n\nSecond verse",
+                "attunement_timings": "[{\"end\":1.5,\"text\":\"Beloved Awaken Wonder\",\"start\":0.1,\"words\":[{\"end\":0.6,\"word\":\"Beloved\",\"start\":0.1}]}]",
+                "attunement_audio_path": "media/audio/universals/activations/awaken-wonder.mp3",
+                "breath11_lines": "[{\"order\":1,\"text\":\"I breathe in Awaken Wonder\"}]",
+                "breath11_timings": null,
+                "breath11_audio_path": "media/audio/universals/breath11/awaken-wonder.mp3",
+                "quantum_whys": "[\"Why is Awaken Wonder so easy?\"]",
+                "created_at": "2026-11-06 23:45:07",
+                "updated_at": "2026-11-06 23:45:07",
+                "short_name": "Awaken Wonder",
+                "is_preview": 1
+            },
+            {
+                "id": "01m6skvqmbn7njtwxbfqwv8syn",
+                "deleted_at": null,
+                "slug": "purpose",
+                "kind": "universal",
+                "sort_order": 5,
+                "title": "Find Your Purpose",
+                "description": "About Purpose.",
+                "image_path": "media/images/universals/original/4-purpose-bee.webp",
+                "attunement_text": "Beloved Purpose\nLine two\n\nSecond verse",
+                "attunement_timings": "[{\"end\":1.5,\"text\":\"Beloved Purpose\",\"start\":0.1,\"words\":[{\"end\":0.6,\"word\":\"Beloved\",\"start\":0.1}]}]",
+                "attunement_audio_path": "media/audio/universals/activations/purpose.mp3",
+                "breath11_lines": "[{\"order\":1,\"text\":\"I breathe in Purpose\"}]",
+                "breath11_timings": null,
+                "breath11_audio_path": "media/audio/universals/breath11/purpose.mp3",
+                "quantum_whys": "[\"Why is Purpose so easy?\"]",
+                "created_at": "2026-11-06 23:45:07",
+                "updated_at": "2026-11-06 23:45:07",
+                "short_name": "Purpose",
+                "is_preview": 0
+            },
+            {
+                "id": "01m6skvqn48n7m2xshb14y82v5",
+                "deleted_at": null,
+                "slug": "introduction",
+                "kind": "base",
+                "sort_order": null,
+                "title": "Introduction",
+                "description": "About Introduction.",
+                "image_path": null,
+                "attunement_text": "Beloved Introduction\nLine two\n\nSecond verse",
+                "attunement_timings": "[{\"end\":1.5,\"text\":\"Beloved Introduction\",\"start\":0.1,\"words\":[{\"end\":0.6,\"word\":\"Beloved\",\"start\":0.1}]}]",
+                "attunement_audio_path": "media/audio/universals/activations/introduction.mp3",
+                "breath11_lines": null,
+                "breath11_timings": null,
+                "breath11_audio_path": null,
+                "quantum_whys": null,
+                "created_at": "2026-11-06 23:45:07",
+                "updated_at": "2026-11-06 23:45:07",
+                "short_name": "Introduction",
+                "is_preview": 0
+            }
+        ],
+        "wildcards": [
+            {
+                "id": "01m6skvqp0000000000000000a",
+                "deleted_at": null,
+                "why": "Why is everything working out for me?",
+                "created_at": "2026-11-06 23:45:07",
+                "updated_at": "2026-11-06 23:45:07"
+            }
+        ]
+    }
+}
