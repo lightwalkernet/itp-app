@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Api\AuthClient;
 use App\Auth\AppSession;
 use App\Livewire\Concerns\CallsApi;
+use App\Support\Runtime;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
@@ -74,6 +75,8 @@ class SignIn extends Component
      */
     protected function deviceName(): string
     {
-        return Str::limit('Web: '.(request()->userAgent() ?: 'browser'), 255, '');
+        $build = Runtime::isMobile() ? 'Mobile' : 'Web';
+
+        return Str::limit($build.': '.(request()->userAgent() ?: 'browser'), 255, '');
     }
 }

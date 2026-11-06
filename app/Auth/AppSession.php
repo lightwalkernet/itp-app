@@ -4,18 +4,27 @@ namespace App\Auth;
 
 use App\Api\AuthClient;
 use App\Api\SignIn;
+use App\Support\Runtime;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Itp\Core\Models\User;
+use Lightwalker\Sync\Client\SyncClient;
 use LogicException;
 
 /**
  * Turns an API sign-in into a signed-in app, and ends it again (platform.md §5).
  *
- * The web build shares itp-server's database, so it signs the user into its own session
- * against the row the API just wrote, and keeps the token for later API calls.
+ * The web build shares itp-server's database, so the API has already written the user row.
+ * The phone has its own SQLite file, so the row the API returns is written there first. Both
+ * then sign into their own session against that row and keep the token for later API calls.
  */
 class AppSession
 {
+    /**
+     * The user columns the API returns that the device keeps.
+     */
+    protected const USER_COLUMNS = ['id', 'email', 'first_name', 'email_verified_at', 'created_at', 'updated_at'];
+
     public function __construct(
         protected AuthClient $auth,
         protected TokenStore $tokens,
@@ -26,13 +35,37 @@ class AppSession
      */
     public function start(SignIn $signIn): User
     {
-        $user = User::find($signIn->user['id'])
-            ?? throw new LogicException("Signed in as user [{$signIn->user['id']}], but that row isn't in the database.");
+        $user = $this->storeUser($signIn->user);
 
         Auth::login($user);
         session()->regenerate();
 
         $this->tokens->put($signIn->token);
+
+        return $user;
+    }
+
+    /**
+     * The local copy of a user row the API returned. On the phone the row is written first,
+     * through the model (platform.md §4); `users` is pull-only, so the write is never pushed.
+     *
+     * @param  array<string, mixed>  $row  the user as the API returns it
+     *
+     * @throws LogicException when the API's user isn't in the shared database
+     */
+    public function storeUser(array $row): User
+    {
+        if (Runtime::isServer()) {
+            return User::find($row['id'])
+                ?? throw new LogicException("Signed in as user [{$row['id']}], but that row isn't in the database.");
+        }
+
+        $user = User::withTrashed()->find($row['id']) ?? new User;
+
+        $user->forceFill(Arr::only($row, self::USER_COLUMNS));
+        $user->deleted_at = null;
+        $user->timestamps = false;
+        $user->save();
 
         return $user;
     }
@@ -48,7 +81,8 @@ class AppSession
     }
 
     /**
-     * End the local session only, e.g. when the API has already said the token is gone.
+     * End the local session only, e.g. when the API has already said the token is gone. On the
+     * phone this also wipes the user's synced rows.
      */
     public function endLocally(): void
     {
@@ -57,5 +91,9 @@ class AppSession
         Auth::logout();
         session()->invalidate();
         session()->regenerateToken();
+
+        if (Runtime::isMobile()) {
+            app(SyncClient::class)->signOut();
+        }
     }
 }

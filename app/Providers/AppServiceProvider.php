@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Auth\SecureStorageTokenStore;
 use App\Auth\SessionTokenStore;
 use App\Auth\TokenStore;
 use App\Support\Runtime;
@@ -19,16 +20,18 @@ class AppServiceProvider extends ServiceProvider
     {
         config(['sync.role' => Runtime::syncRole()]);
 
-        // The mobile build's SecureStorage store is bound here once NativePHP is installed.
-        $this->app->bind(TokenStore::class, SessionTokenStore::class);
+        $this->app->bind(TokenStore::class, fn ($app): TokenStore => Runtime::isMobile()
+            ? $app->make(SecureStorageTokenStore::class)
+            : $app->make(SessionTokenStore::class));
     }
 
     /**
      * Bootstrap any application services.
      *
      * The web build runs no migrations: it uses itp-server's MySQL database as it is
-     * (platform.md §4). Tests build that schema in SQLite from itp-core's shared tables and
-     * the sync counter. The mobile build's migrations are loaded with NativePHP.
+     * (platform.md §4). The mobile build builds its own SQLite file from itp-core's shared
+     * tables and the sync client's cursors; NativePHP runs `migrate` on the device after each
+     * install. Tests build both schemas in one SQLite database, so either build can be tested.
      */
     public function boot(): void
     {
@@ -36,9 +39,17 @@ class AppServiceProvider extends ServiceProvider
             $this->loadMigrationsFrom([
                 ItpCoreServiceProvider::migrationsPath(),
                 SyncServiceProvider::serverMigrationsPath(),
+                SyncServiceProvider::clientMigrationsPath(),
             ]);
 
             return;
+        }
+
+        if (Runtime::isMobile()) {
+            $this->loadMigrationsFrom([
+                ItpCoreServiceProvider::migrationsPath(),
+                SyncServiceProvider::clientMigrationsPath(),
+            ]);
         }
 
         Runtime::assertMatchesDatabase(DB::connection()->getDriverName());

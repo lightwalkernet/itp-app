@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Api\AuthClient;
+use App\Auth\AppSession;
 use App\Livewire\Concerns\CallsApi;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -12,7 +13,8 @@ use Livewire\Component;
 
 /**
  * Asks for a first name when the account has none. Checked on every visit by
- * EnsureProfileIsComplete. The name is saved through the API, never written here.
+ * EnsureProfileIsComplete. The name is saved through the API; the phone then keeps the
+ * user row the API returns.
  */
 #[Layout('layouts.guest')]
 #[Title('Your name')]
@@ -32,7 +34,7 @@ class CompleteProfile extends Component
         }
     }
 
-    public function save(AuthClient $auth): void
+    public function save(AuthClient $auth, AppSession $session): void
     {
         $this->first_name = trim($this->first_name);
 
@@ -41,6 +43,8 @@ class CompleteProfile extends Component
         $saved = $this->callApi(fn () => $auth->completeProfile($this->first_name), 'first_name');
 
         if ($saved !== null) {
+            $session->storeUser($saved);
+
             $this->redirectRoute('home');
         }
     }
