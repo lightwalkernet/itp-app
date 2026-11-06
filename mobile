@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+#
+# Run a NativePHP command against the mobile build's settings (platform.md §3a).
+#
+# NativePHP always reads and bundles the project's own .env, so this swaps the local
+# .env.mobile in as .env, runs `php artisan native:<command>`, and always puts the web
+# .env back afterwards: on success, on failure and on Ctrl-C.
+#
+#   ./mobile run ios
+#   ./mobile run android
+#   ./mobile <any native: command> [options]
+
+set -euo pipefail
+
+cd "$(dirname "$0")"
+
+if [ $# -eq 0 ]; then
+    echo "Usage: ./mobile <native command> [options], e.g. ./mobile run ios" >&2
+    exit 1
+fi
+
+if [ ! -f .env.mobile ]; then
+    echo ".env.mobile not found. Copy .env.mobile.example to .env.mobile and fill it in." >&2
+    exit 1
+fi
+
+if [ -f .env.web ]; then
+    echo ".env.web already exists, so an earlier run didn't finish restoring .env." >&2
+    echo "Check which file is your web .env, put it back as .env, delete .env.web, then try again." >&2
+    exit 1
+fi
+
+had_web_env=false
+
+restore() {
+    trap - EXIT INT TERM
+
+    if [ "$had_web_env" = true ]; then
+        mv -f .env.web .env
+        echo "Restored the web .env."
+    else
+        rm -f .env
+    fi
+
+    php artisan config:clear > /dev/null 2>&1 || true
+}
+
+if [ -f .env ]; then
+    mv .env .env.web
+    had_web_env=true
+fi
+
+trap restore EXIT
+trap 'exit 130' INT TERM
+
+cp .env.mobile .env
+php artisan config:clear > /dev/null
+
+command="$1"
+shift
+
+php artisan "native:${command}" "$@"
