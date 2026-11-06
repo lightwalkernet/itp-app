@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Middleware\PreventRequestForgeryOnWeb;
 use App\Http\Middleware\RestoreDeviceSignIn;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Http\Request;
 use Illuminate\Session\Middleware\StartSession;
 
@@ -17,7 +19,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(fn () => route('sign-in'));
         $middleware->redirectUsersTo(fn () => route('home'));
 
-        $middleware->web(append: RestoreDeviceSignIn::class);
+        $middleware->web(
+            append: [RestoreDeviceSignIn::class],
+            replace: [PreventRequestForgery::class => PreventRequestForgeryOnWeb::class],
+        );
         $middleware->appendToPriorityList(StartSession::class, RestoreDeviceSignIn::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
