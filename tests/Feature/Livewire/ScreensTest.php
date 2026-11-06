@@ -28,13 +28,29 @@ it('greets the user at home, with the tab bar', function () {
         ->assertSee('data-transition="tab"', escape: false);
 });
 
+/*
+ * On the phone Laravel builds http://127.0.0.1 URLs for pages served from php://127.0.0.1, so an
+ * absolute link leaves the app's origin: a tab can't navigate, a POST arrives as a bodyless GET.
+ */
+it('links between screens by path, never by absolute URL', function () {
+    $this->actingAs(User::factory()->create());
+
+    $this->get(route('home'))
+        ->assertSee('href="/" data-transition="tab"', escape: false)
+        ->assertSee('href="/account" data-transition="tab"', escape: false)
+        ->assertDontSee('href="'.url('/'), escape: false);
+
+    $this->get(route('account'))
+        ->assertSee('action="/sign-out"', escape: false);
+});
+
 it('shows the account and a sign-out form', function () {
     $this->actingAs(User::factory()->create(['first_name' => 'Ann', 'email' => 'ann@example.com']))
         ->get(route('account'))
         ->assertOk()
         ->assertSeeLivewire(Account::class)
         ->assertSee('ann@example.com')
-        ->assertSee(route('sign-out'));
+        ->assertSee('Sign out');
 });
 
 it('shows the update screen for each build', function (string $flag, string $text) {

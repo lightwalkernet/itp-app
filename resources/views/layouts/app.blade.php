@@ -13,11 +13,13 @@
         <div class="app-player" data-player></div>
     @endpersist
 
-    {{-- Persisted: same DOM node across navigations, never animates. transitions.js keeps aria-current right. --}}
+    {{-- Persisted: same DOM node across navigations, never animates. transitions.js keeps aria-current right.
+         Paths, not absolute URLs: on the phone Laravel builds http://127.0.0.1 links for a page served
+         from php://127.0.0.1, and Home's absolute URL has no path at all. --}}
     @persist('tabbar')
         <nav class="app-tabbar border-t border-stone-200 bg-white text-sm text-stone-500" aria-label="Main">
-            <a href="{{ route('home') }}" data-transition="tab" data-tab-match="/" class="aria-[current=page]:font-semibold aria-[current=page]:text-stone-900">Home</a>
-            <a href="{{ route('account') }}" data-transition="tab" data-tab-match="/account" class="aria-[current=page]:font-semibold aria-[current=page]:text-stone-900">Account</a>
+            <a href="{{ route('home', absolute: false) }}" data-transition="tab" data-tab-match="/" class="aria-[current=page]:font-semibold aria-[current=page]:text-stone-900">Home</a>
+            <a href="{{ route('account', absolute: false) }}" data-transition="tab" data-tab-match="/account" class="aria-[current=page]:font-semibold aria-[current=page]:text-stone-900">Account</a>
         </nav>
     @endpersist
 </body>

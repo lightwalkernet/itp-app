@@ -12,7 +12,7 @@
         </div>
     </dl>
 
-    <form method="POST" action="{{ route('sign-out') }}" class="mt-6">
+    <form method="POST" action="{{ route('sign-out', absolute: false) }}" class="mt-6">
         @csrf
         <button type="submit" class="w-full rounded-lg bg-white px-4 py-2.5 font-medium ring-1 ring-stone-300">Sign out</button>
     </form>
