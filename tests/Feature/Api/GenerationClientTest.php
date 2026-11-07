@@ -40,9 +40,13 @@ it('calls each generation endpoint as the signed-in user', function (Closure $ca
         fn (GenerationClient $client) => $client->answerFollowups('01jc0000000000000000000001', [['followup_id' => 12, 'answer_text' => 'Yes']]),
         'POST', 'https://api.itp.test/v1/generations/01jc0000000000000000000001/followups', ['answers' => [['followup_id' => 12, 'answer_text' => 'Yes']]],
     ],
-    'flag a segment' => [
-        fn (GenerationClient $client) => $client->flagSegment('01jc0000000000000000000001', 40, 'Too loud', null),
-        'POST', 'https://api.itp.test/v1/generations/01jc0000000000000000000001/segments/40/flags', ['user_explanation' => 'Too loud', 'requested_change' => null],
+    'flag a section' => [
+        fn (GenerationClient $client) => $client->flagSection('01jc0000000000000000000001', 3, 'Too loud', 'Softer', 52),
+        'POST', 'https://api.itp.test/v1/generations/01jc0000000000000000000001/sections/3/flags', ['user_explanation' => 'Too loud', 'requested_change' => 'Softer', 'segment_id' => 52],
+    ],
+    'choose a section\'s version' => [
+        fn (GenerationClient $client) => $client->chooseSection('01jc0000000000000000000001', 3, 'original'),
+        'POST', 'https://api.itp.test/v1/generations/01jc0000000000000000000001/sections/3/choice', ['keep' => 'original'],
     ],
     'accept' => [
         fn (GenerationClient $client) => $client->accept('01jc0000000000000000000001'),

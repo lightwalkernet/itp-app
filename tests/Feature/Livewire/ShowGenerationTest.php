@@ -18,13 +18,32 @@ beforeEach(function () {
 });
 
 /**
- * @return array{id: int, version: int, segments: list<array<string, mixed>>}
+ * An attunement in two sections. The second can be mid-rewrite, or have a rewrite waiting.
+ *
+ * @return array{id: int, version: int, sections: list<array<string, mixed>>}
  */
-function sampleAttunement(bool $secondIsRegenerating = false): array
+function sampleAttunement(bool $secondIsRegenerating = false, bool $secondHasProposal = false): array
 {
-    return ['id' => 3, 'version' => 1, 'segments' => [
-        ['id' => 40, 'order' => 1, 'text' => 'Beloved Ann, the studio is already waiting for you.'],
-        ['id' => 41, 'order' => 2, 'text' => 'Every lease you sign is a yes to your hands.'] + ($secondIsRegenerating ? ['regenerating' => true] : []),
+    return ['id' => 3, 'version' => 1, 'sections' => [
+        [
+            'part' => 1,
+            'segments' => [['id' => 40, 'order' => 1, 'text' => 'Beloved Ann, the studio is already waiting for you.']],
+            'regenerating' => false,
+            'proposal' => null,
+            'pinpointed_segment_id' => null,
+        ],
+        [
+            'part' => 3,
+            'segments' => [
+                ['id' => 41, 'order' => 1, 'text' => 'Every lease you sign is a yes to your hands.'],
+                ['id' => 42, 'order' => 2, 'text' => 'The kiln hums your name.'],
+            ],
+            'regenerating' => $secondIsRegenerating,
+            'proposal' => $secondHasProposal ? ['flag_id' => 9, 'segments' => [
+                ['id' => 77, 'order' => 1, 'text' => 'Your hands already know the way to the wheel.'],
+            ]] : null,
+            'pinpointed_segment_id' => $secondIsRegenerating || $secondHasProposal ? 41 : null,
+        ],
     ]];
 }
 
@@ -43,7 +62,7 @@ it('shows each status, polling only while the server is working', function (arra
     'queued' => [['status' => 'queued'], 'Getting started…', true],
     'assessing' => [['status' => 'assessing'], 'Taking in what you shared…', true],
     'generating' => [['status' => 'generating'], 'Writing your attunement…', true],
-    'regenerating' => [['status' => 'regenerating', 'attunement' => sampleAttunement(secondIsRegenerating: true)], 'Being rewritten…', true],
+    'regenerating' => [['status' => 'regenerating', 'attunement' => sampleAttunement(secondIsRegenerating: true)], 'Rewriting this part…', true],
     'deriving companions' => [['status' => 'deriving_companions', 'attunement' => sampleAttunement()], 'Creating your Breathe 11 and Quantum Whys…', true],
     'a stage this app doesn\'t know yet' => [['status' => 'polishing'], 'Working on it…', true],
     'awaiting follow-up' => [['status' => 'awaiting_followup', 'followups' => [['id' => 12, 'round' => 1, 'question_text' => 'Who will your first students be?']]], 'Who will your first students be?', false],
@@ -78,40 +97,150 @@ it('sends the follow-up answers, then waits for the server again', function () {
         ]]);
 });
 
-it('flags a segment that doesn\'t resonate', function () {
-    app(TokenStore::class)->put('1|secret');
-    Http::fake([
-        GENERATION_URL.'/segments/41/flags' => generationResponse(['status' => 'regenerating', 'attunement' => sampleAttunement(secondIsRegenerating: true)], 202),
-        GENERATION_URL => generationResponse(['status' => 'awaiting_resonance', 'attunement' => sampleAttunement()]),
-    ]);
-
-    Livewire::actingAs(User::factory()->create())
-        ->test(ShowGeneration::class, ['generationId' => GENERATION_ID])
-        ->call('startFlag', 41)
-        ->assertSee('What doesn’t resonate?')
-        ->set('user_explanation', 'I haven\'t found the space yet')
-        ->call('flag')
-        ->assertHasNoErrors()
-        ->assertSee('Being rewritten…')
-        ->assertSet('flaggingSegmentId', null);
-
-    Http::assertSent(fn (Request $request) => $request->url() === 'https://'.GENERATION_URL.'/segments/41/flags'
-        && $request->data() === ['user_explanation' => 'I haven\'t found the space yet', 'requested_change' => null]);
-});
-
-it('needs an explanation before flagging a segment', function () {
+it('shows each section as a passage, without part labels', function () {
     app(TokenStore::class)->put('1|secret');
     Http::fake([GENERATION_URL => generationResponse(['status' => 'awaiting_resonance', 'attunement' => sampleAttunement()])]);
 
     Livewire::actingAs(User::factory()->create())
         ->test(ShowGeneration::class, ['generationId' => GENERATION_ID])
-        ->call('startFlag', 40)
+        ->assertSeeInOrder(['Beloved Ann, the studio is already waiting for you.', 'This doesn’t resonate', 'Every lease you sign is a yes to your hands.', 'The kiln hums your name.', 'This doesn’t resonate', 'Accept'])
+        ->assertSeeHtml('wire:click="startFlag(1)"')
+        ->assertSeeHtml('wire:click="startFlag(3)"')
+        ->assertDontSee('Opening')
+        ->assertDontSee('Essence');
+});
+
+it('flags a section that doesn\'t resonate', function (?int $segmentId, string $requestedChange, ?string $sentChange) {
+    app(TokenStore::class)->put('1|secret');
+    Http::fake([
+        GENERATION_URL.'/sections/3/flags' => generationResponse(['status' => 'regenerating', 'attunement' => sampleAttunement(secondIsRegenerating: true)], 202),
+        GENERATION_URL => generationResponse(['status' => 'awaiting_resonance', 'attunement' => sampleAttunement()]),
+    ]);
+
+    Livewire::actingAs(User::factory()->create())
+        ->test(ShowGeneration::class, ['generationId' => GENERATION_ID])
+        ->call('startFlag', 3)
+        ->assertSee(['What doesn’t resonate?', 'Which line bothered you most?'])
+        ->set('user_explanation', ' I haven\'t found the space yet ')
+        ->set('requested_change', $requestedChange)
+        ->set('segment_id', $segmentId)
+        ->call('flag')
+        ->assertHasNoErrors()
+        ->assertSee('Rewriting this part…')
+        ->assertSeeHtml('wire:poll.3s="refresh"')
+        ->assertSet('flaggingPart', null)
+        ->assertSet('segment_id', null);
+
+    Http::assertSent(fn (Request $request) => $request->url() === 'https://'.GENERATION_URL.'/sections/3/flags'
+        && $request->data() === ['user_explanation' => 'I haven\'t found the space yet', 'requested_change' => $sentChange, 'segment_id' => $segmentId]);
+})->with([
+    'the whole section' => [null, '', null],
+    'pointing at one line' => [42, 'Something about my hands', 'Something about my hands'],
+]);
+
+it('needs an explanation before flagging a section', function () {
+    app(TokenStore::class)->put('1|secret');
+    Http::fake([GENERATION_URL => generationResponse(['status' => 'awaiting_resonance', 'attunement' => sampleAttunement()])]);
+
+    Livewire::actingAs(User::factory()->create())
+        ->test(ShowGeneration::class, ['generationId' => GENERATION_ID])
+        ->call('startFlag', 1)
         ->call('flag')
         ->assertHasErrors(['user_explanation' => 'required'])
         ->assertSee('The explanation field is required.');
 
     Http::assertNotSent(fn (Request $request) => str_contains($request->url(), '/flags'));
 });
+
+it('only lets the user point at a line in the section they\'re flagging', function () {
+    app(TokenStore::class)->put('1|secret');
+    Http::fake([GENERATION_URL => generationResponse(['status' => 'awaiting_resonance', 'attunement' => sampleAttunement()])]);
+
+    Livewire::actingAs(User::factory()->create())
+        ->test(ShowGeneration::class, ['generationId' => GENERATION_ID])
+        ->call('startFlag', 3)
+        ->set('user_explanation', 'Too much')
+        ->set('segment_id', 40)
+        ->call('flag')
+        ->assertHasErrors(['segment_id' => 'in']);
+
+    Http::assertNotSent(fn (Request $request) => str_contains($request->url(), '/flags'));
+});
+
+it('keeps polling while a section is rewritten, without offering to accept or flag', function () {
+    app(TokenStore::class)->put('1|secret');
+    Http::fake([GENERATION_URL => Http::sequence()
+        ->push(['message' => 'OK', 'errors' => [], 'data' => ['generation' => ['id' => GENERATION_ID, 'status' => 'regenerating', 'itp_id' => null, 'attunement' => sampleAttunement(secondIsRegenerating: true)]]])
+        ->push(['message' => 'OK', 'errors' => [], 'data' => ['generation' => ['id' => GENERATION_ID, 'status' => 'regenerating', 'itp_id' => null, 'attunement' => sampleAttunement(secondIsRegenerating: true)]]])
+        ->push(['message' => 'OK', 'errors' => [], 'data' => ['generation' => ['id' => GENERATION_ID, 'status' => 'awaiting_resonance', 'itp_id' => null, 'attunement' => sampleAttunement(secondHasProposal: true)]]]),
+    ]);
+
+    Livewire::actingAs(User::factory()->create())
+        ->test(ShowGeneration::class, ['generationId' => GENERATION_ID])
+        ->assertSee(['Beloved Ann, the studio is already waiting for you.', 'Rewriting this part…', 'You can accept once it’s ready.'])
+        ->assertSeeHtml('wire:poll.3s="refresh"')
+        ->assertDontSeeHtml('wire:click="accept"')
+        ->assertDontSeeHtml('wire:click="startFlag')
+        ->call('refresh')
+        ->assertSeeHtml('wire:poll.3s="refresh"')
+        ->call('refresh')
+        ->assertSee('New version')
+        ->assertDontSeeHtml('wire:poll');
+});
+
+it('offers the rewritten section next to the original, and holds Accept until the user chooses', function () {
+    app(TokenStore::class)->put('1|secret');
+    Http::fake([GENERATION_URL => generationResponse(['status' => 'awaiting_resonance', 'attunement' => sampleAttunement(secondHasProposal: true)])]);
+
+    Livewire::actingAs(User::factory()->create())
+        ->test(ShowGeneration::class, ['generationId' => GENERATION_ID])
+        ->assertSeeInOrder(['New version', 'Your hands already know the way to the wheel.', 'Use this', 'Your original', 'Every lease you sign is a yes to your hands.', 'The kiln hums your name.', 'Keep the original'])
+        ->assertSee('Choose a version for the rewritten part first')
+        ->assertDontSeeHtml('wire:click="accept"')
+        ->assertDontSeeHtml('wire:click="startFlag(3)"');
+});
+
+it('sends the user\'s choice between the versions', function (string $button, string $keep) {
+    app(TokenStore::class)->put('1|secret');
+    Http::fake([
+        GENERATION_URL.'/sections/3/choice' => generationResponse(['status' => 'awaiting_resonance', 'attunement' => sampleAttunement()]),
+        GENERATION_URL => generationResponse(['status' => 'awaiting_resonance', 'attunement' => sampleAttunement(secondHasProposal: true)]),
+    ]);
+
+    Livewire::actingAs(User::factory()->create())
+        ->test(ShowGeneration::class, ['generationId' => GENERATION_ID])
+        ->assertSeeHtml($button)
+        ->call('choose', 3, $keep)
+        ->assertHasNoErrors()
+        ->assertDontSee('New version')
+        ->assertSeeHtml('wire:click="accept"');
+
+    Http::assertSent(fn (Request $request) => $request->method() === 'POST'
+        && $request->url() === 'https://'.GENERATION_URL.'/sections/3/choice'
+        && $request->data() === ['keep' => $keep]);
+})->with([
+    'use this' => ['wire:click="choose(3, \'new\')"', 'new'],
+    'keep the original' => ['wire:click="choose(3, \'original\')"', 'original'],
+]);
+
+it('shows the server\'s refusal beside the action', function (Closure $act, string $endpoint, array $attunement) {
+    app(TokenStore::class)->put('1|secret');
+    Http::fake([
+        GENERATION_URL.$endpoint => Http::response(['message' => 'This part is already being rewritten.', 'data' => (object) [], 'errors' => (object) []], 422),
+        GENERATION_URL => generationResponse(['status' => 'awaiting_resonance', 'attunement' => $attunement]),
+    ]);
+
+    $screen = Livewire::actingAs(User::factory()->create())
+        ->test(ShowGeneration::class, ['generationId' => GENERATION_ID]);
+
+    $act($screen)
+        ->assertSee('This part is already being rewritten.')
+        ->assertSet('generation.attunement', $attunement);
+})->with([
+    'flagging' => [fn ($screen) => $screen->call('startFlag', 3)->set('user_explanation', 'Too much')->call('flag')->assertSee('Rewrite this part'), '/sections/3/flags', sampleAttunement()],
+    'choosing' => [fn ($screen) => $screen->call('choose', 3, 'new')->assertSee('Use this'), '/sections/3/choice', sampleAttunement(secondHasProposal: true)],
+    'accepting' => [fn ($screen) => $screen->call('accept')->assertSee('Accept'), '/accept', sampleAttunement()],
+]);
 
 it('accepts the attunement', function () {
     app(TokenStore::class)->put('1|secret');

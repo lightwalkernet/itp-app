@@ -64,22 +64,42 @@ class GenerationClient extends ApiClient
     }
 
     /**
-     * Say a segment of the attunement doesn't resonate. The server rewrites it.
+     * Say a section of the attunement doesn't resonate, optionally pointing at the line that
+     * bothered the user most. The server rewrites the whole section, then offers the new version
+     * next to the original. A refusal without field errors (e.g. the section already has a
+     * proposal) lands on `section`.
      *
      * @return array<string, mixed>
      *
      * @throws ValidationException|AppUpdateRequired|SignedOut|NotFound|ApiUnavailable
      */
-    public function flagSegment(string $id, int $segmentId, string $userExplanation, ?string $requestedChange): array
+    public function flagSection(string $generationId, int $part, string $explanation, ?string $requestedChange, ?int $segmentId): array
     {
-        return $this->send('POST', $this->path($id, "segments/{$segmentId}/flags"), [
-            'user_explanation' => $userExplanation,
+        return $this->send('POST', $this->path($generationId, "sections/{$part}/flags"), [
+            'user_explanation' => $explanation,
             'requested_change' => $requestedChange,
-        ], authenticated: true, errorField: 'user_explanation')['generation'];
+            'segment_id' => $segmentId,
+        ], authenticated: true, errorField: 'section')['generation'];
+    }
+
+    /**
+     * Choose between a rewritten section and the original.
+     *
+     * @param  'new'|'original'  $keep
+     * @return array<string, mixed>
+     *
+     * @throws ValidationException|AppUpdateRequired|SignedOut|NotFound|ApiUnavailable
+     */
+    public function chooseSection(string $generationId, int $part, string $keep): array
+    {
+        return $this->send('POST', $this->path($generationId, "sections/{$part}/choice"), [
+            'keep' => $keep,
+        ], authenticated: true, errorField: 'section')['generation'];
     }
 
     /**
      * Accept the attunement as it is. The server then derives the companions and the title.
+     * A refusal (e.g. a rewritten section still waiting for a choice) lands on `accept`.
      *
      * @return array<string, mixed>
      *
@@ -87,7 +107,7 @@ class GenerationClient extends ApiClient
      */
     public function accept(string $id): array
     {
-        return $this->send('POST', $this->path($id, 'accept'), authenticated: true)['generation'];
+        return $this->send('POST', $this->path($id, 'accept'), authenticated: true, errorField: 'accept')['generation'];
     }
 
     protected function path(string $id, string $suffix = ''): string
