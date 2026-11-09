@@ -104,3 +104,30 @@ it('sends a signed-in user without a first name to the profile screen first', fu
 it('is not found for an unknown slug', function () {
     $this->get('/universal/no-such-itp')->assertNotFound();
 });
+
+it('lets a guest open the Introduction, which has audio and words but nothing else', function () {
+    $introduction = UniversalItp::factory()->base()->preview()->create([
+        'short_name' => 'Introduction',
+        'description' => null,
+        'image_path' => null,
+        'attunement_text' => 'Welcome, beloved.',
+        'attunement_audio_path' => 'media/audio/base/introduction.mp3',
+        'breath11_lines' => null,
+        'breath11_timings' => null,
+        'breath11_audio_path' => null,
+        'quantum_whys' => null,
+    ]);
+
+    $this->get(route('universals.show', $introduction))
+        ->assertOk()
+        ->assertSee('Welcome, beloved.')
+        ->assertSee('src="'.asset('media/audio/base/introduction.mp3').'"', escape: false);
+});
+
+it('ships the Introduction and the four previews as playable for guests', function () {
+    $snapshot = json_decode(file_get_contents(resource_path('content/snapshot.json')), true, flags: JSON_THROW_ON_ERROR);
+
+    $playable = array_column(array_filter($snapshot['types']['universal_itps'], fn (array $row) => (bool) $row['is_preview']), 'slug');
+
+    expect($playable)->toEqualCanonicalizing(['awaken-wonder', 'abundance', 'healing', 'nervous-system-reset', 'introduction']);
+});
