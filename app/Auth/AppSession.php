@@ -17,7 +17,8 @@ use LogicException;
  * The web build shares itp-server's database, so the API has already written the user row.
  * The phone has its own SQLite file, so the row the API returns is written there first. Both
  * then sign into their own session against that row and keep the token for later API calls.
- * The phone also keeps the user's id in the keychain, so it stays signed in until sign-out.
+ * The phone also keeps the user's id in the keychain, so it stays signed in until sign-out. A
+ * browser the user said is theirs keeps its sign-in in a cookie, for 90 days (TrustedBrowser).
  */
 class AppSession
 {
@@ -30,12 +31,13 @@ class AppSession
         protected AuthClient $auth,
         protected TokenStore $tokens,
         protected DeviceAccount $device,
+        protected TrustedBrowser $browser,
     ) {}
 
     /**
      * @throws LogicException when the API's user isn't in the shared database
      */
-    public function start(SignIn $signIn): User
+    public function start(SignIn $signIn, bool $trustThisBrowser = false): User
     {
         $user = $this->storeUser($signIn->user);
 
@@ -46,16 +48,27 @@ class AppSession
 
         if (Runtime::isMobile()) {
             $this->device->remember($user->id);
+        } elseif ($trustThisBrowser) {
+            $this->browser->remember($user->id, $signIn->token);
         }
 
         return $user;
     }
 
     /**
-     * Sign the phone back in from the keychain. Clears the keychain when its user is no longer
-     * on the phone, e.g. after the app was deleted and reinstalled (iOS keeps keychain items).
+     * Sign back in when the session has no user: the phone from its keychain, a trusted browser
+     * from its cookie.
      */
     public function restore(): bool
+    {
+        return Runtime::isMobile() ? $this->restoreFromKeychain() : $this->restoreFromTrustedBrowser();
+    }
+
+    /**
+     * Clears the keychain when its user is no longer on the phone, e.g. after the app was deleted
+     * and reinstalled (iOS keeps keychain items).
+     */
+    protected function restoreFromKeychain(): bool
     {
         $userId = $this->device->userId();
 
@@ -73,6 +86,32 @@ class AppSession
         }
 
         Auth::login($user);
+
+        return true;
+    }
+
+    /**
+     * Puts the token back in the session too, because the session that held it has gone.
+     */
+    protected function restoreFromTrustedBrowser(): bool
+    {
+        $trusted = $this->browser->read();
+
+        if ($trusted === null) {
+            return false;
+        }
+
+        $user = User::find($trusted['user_id']);
+
+        if ($user === null) {
+            $this->browser->forget();
+
+            return false;
+        }
+
+        Auth::login($user);
+
+        $this->tokens->put($trusted['token']);
 
         return true;
     }
@@ -142,6 +181,8 @@ class AppSession
             $this->device->forget();
 
             app(SyncClient::class)->signOut();
+        } else {
+            $this->browser->forget();
         }
     }
 }

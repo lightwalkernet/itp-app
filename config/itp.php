@@ -32,6 +32,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Trusted browsers
+    |--------------------------------------------------------------------------
+    |
+    | How long the web build stays signed in, from sign-in, when the user
+    | ticks "This is my own device". The phone stays signed in until sign-out.
+    |
+    */
+
+    'trusted_device_days' => (int) env('ITP_TRUSTED_DEVICE_DAYS', 90),
+
+    /*
+    |--------------------------------------------------------------------------
     | Media
     |--------------------------------------------------------------------------
     |

@@ -28,6 +28,8 @@ class SignIn extends Component
 
     public bool $codeSent = false;
 
+    public bool $keepSignedIn = false;
+
     public function sendCode(AuthClient $auth): void
     {
         $this->email = Str::lower(trim($this->email));
@@ -52,7 +54,7 @@ class SignIn extends Component
             return;
         }
 
-        $session->start($signIn);
+        $session->start($signIn, $this->keepSignedIn);
 
         $signIn->needsProfile
             ? $this->redirectRoute('profile')

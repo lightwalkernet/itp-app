@@ -3,16 +3,14 @@
 namespace App\Http\Middleware;
 
 use App\Auth\AppSession;
-use App\Support\Runtime;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Keeps the phone signed in until the user signs out: when the session has no user (a fresh
- * launch, an expired session), sign in again from the keychain. Runs before `auth` and `guest`.
- * The web build signs in through its session only.
+ * When the session has no user (a fresh launch, an expired session), sign in again from the
+ * phone's keychain or a trusted browser's cookie. Runs before `auth` and `guest`.
  */
 class RestoreDeviceSignIn
 {
@@ -25,7 +23,7 @@ class RestoreDeviceSignIn
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (Runtime::isMobile() && Auth::guest()) {
+        if (Auth::guest()) {
             $this->session->restore();
         }
 
