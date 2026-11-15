@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsureProfileIsComplete;
 use App\Livewire\Account;
 use App\Livewire\CompleteProfile;
 use App\Livewire\CreateItp;
+use App\Livewire\DesignSystem;
 use App\Livewire\Home;
 use App\Livewire\ShowGeneration;
 use App\Livewire\ShowItp;
@@ -46,3 +47,11 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::livewire('update-required', UpdateRequired::class)->name('update-required');
+
+/*
+ * The design system on one screen (tokens, the field, the bar, components). Local only, so it
+ * never reaches Forge or the phone build.
+ */
+if (app()->environment('local')) {
+    Route::livewire('design', DesignSystem::class)->name('design');
+}

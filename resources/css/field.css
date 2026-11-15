@@ -1,0 +1,99 @@
+/*
+ * The field of light (design/direction.md "Light"; architecture/field-persistence.md).
+ *
+ * The field sits in the layout inside @persist('field'), fixed behind every page. Only two things
+ * here are CSS: the sky gradient and the grain. Everything that moves (light forms, rays, motes,
+ * stars) is drawn on the canvas by field.js, because Livewire re-inserts a persisted element on
+ * every navigation and that restarts any CSS animation (platform.md §8). Canvas state survives.
+ *
+ * In a white room (html[data-room="white"]) the field fades out and the canvas stops drawing.
+ */
+
+.field {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 40%, var(--sky-hot) 70%, var(--sky-low) 100%);
+    transition:
+        --sky-top var(--phase-duration) ease,
+        --sky-mid var(--phase-duration) ease,
+        --sky-hot var(--phase-duration) ease,
+        --sky-low var(--phase-duration) ease,
+        opacity 0.8s ease;
+}
+
+:root[data-room="white"] .field {
+    opacity: 0;
+    pointer-events: none;
+}
+
+/*
+ * The canvas carries its colours as CSS so field.js can read them after the phase transition
+ * has interpolated them (color / border-color / outline-color are just three animatable slots).
+ * Blur is a static filter on the element, not an animation, so it is safe inside @persist.
+ */
+.field__canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    filter: blur(1.2px);
+    mix-blend-mode: screen;
+    color: var(--ray-warm);
+    border-color: var(--ray-cool);
+    outline-color: var(--mote);
+    transition:
+        color var(--phase-duration) ease,
+        border-color var(--phase-duration) ease,
+        outline-color var(--phase-duration) ease;
+}
+
+/* The blobs and horizon glow are drawn on a second canvas without blur, composited with screen. */
+.field__canvas--light {
+    filter: none;
+    mix-blend-mode: screen;
+    color: var(--light-a);
+    border-color: var(--light-b);
+    outline-color: var(--light-c);
+    text-decoration-color: var(--light-d);
+    column-rule-color: var(--horizon);
+    transition:
+        color var(--phase-duration) ease,
+        border-color var(--phase-duration) ease,
+        outline-color var(--phase-duration) ease,
+        text-decoration-color var(--phase-duration) ease,
+        column-rule-color var(--phase-duration) ease;
+}
+
+.field__grain {
+    position: absolute;
+    inset: 0;
+    opacity: 0.07;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+    background-size: 160px 160px;
+}
+
+/* Still mode and reduced motion: field.js draws one frame and stops; the grain stays. */
+:root[data-still] .field__canvas,
+:root[data-still] .field__canvas--light {
+    filter: none;
+}
+
+/* ---------- text in the light ---------- */
+
+/* Words read in a light room: pale ink with a breath of glow behind them. */
+.lit {
+    color: var(--ink);
+    transition: color var(--phase-duration) ease;
+}
+.lit-soft {
+    color: var(--ink-soft);
+    transition: color var(--phase-duration) ease;
+}
+.lit-glow {
+    text-shadow: 0 0 28px color-mix(in oklab, var(--glow) 40%, transparent);
+}

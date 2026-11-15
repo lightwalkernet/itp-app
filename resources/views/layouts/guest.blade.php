@@ -2,7 +2,12 @@
 {{-- is-native comes from the platform flag only (platform.md §3a); CSS and transitions.js read it. --}}
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" @class(['is-native' => \App\Support\Runtime::isMobile()])>
 @include('partials.document-head')
-<body class="app-body bg-stone-50 font-sans text-stone-900 antialiased">
+<body class="app-body antialiased">
+    {{-- The field of light, as in layouts/app (architecture/field-persistence.md). --}}
+    @persist('field')
+        <x-field />
+    @endpersist
+
     <main class="app-page">
         {{ $slot }}
     </main>

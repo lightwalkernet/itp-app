@@ -1,10 +1,57 @@
 @import 'tailwindcss';
+
+/* Fraunces, the one typeface, bundled so it works offline on the phone (all axes: opsz, wght, SOFT, WONK). */
+@import '@fontsource-variable/fraunces/full.css';
+@import '@fontsource-variable/fraunces/full-italic.css';
+
+@import './tokens.css';
 @import './transitions.css';
+@import './field.css';
+@import './bar.css';
+@import './components.css';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
+/*
+ * Tailwind sees the design tokens too, so a page can say `text-ink` or `bg-paper` and follow the
+ * phase/room automatically. `inline` makes the utilities reference the custom properties directly.
+ */
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-serif: 'Fraunces Variable', 'Palatino', 'Book Antiqua', 'Palatino Linotype', Georgia, serif;
+    --font-sans: 'Fraunces Variable', 'Palatino', 'Book Antiqua', 'Palatino Linotype', Georgia, serif;
+    --color-accent: #b08d3c;
+}
+
+@theme inline {
+    --color-ink: var(--ink);
+    --color-ink-soft: var(--ink-soft);
+    --color-glow: var(--glow);
+    --color-paper: var(--paper);
+    --color-card-ink: var(--card-ink);
+    --color-card-ink-soft: var(--card-ink-soft);
+    --color-card-rule: var(--card-rule);
+}
+
+/*
+ * The page surface (transitions.css paints .app-page with it): see-through to the field in a
+ * light room, paper in a white room. The swipe-back underlay uses the same value.
+ */
+:root {
+    --page-surface: transparent;
+}
+:root[data-room="white"] {
+    --page-surface: var(--paper);
+}
+
+.app-body {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+    color: var(--card-ink);
+    background: var(--sky-mid);
+    transition: background var(--phase-duration) ease;
+}
+:root[data-room="white"] .app-body {
+    background: var(--paper);
 }

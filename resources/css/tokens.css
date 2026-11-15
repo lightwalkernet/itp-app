@@ -1,0 +1,109 @@
+/*
+ * Design tokens (design/direction.md in the ITP Project).
+ *
+ * Everything the field, the bar and the components colour themselves with lives here, as custom
+ * properties on :root. Three attributes on <html> drive them, and nothing else does:
+ *
+ *   data-phase  dawn | day | dusk | night   set by field.js from the device clock
+ *   data-room   light | white               set by rooms.js from the page's root element
+ *   data-still  (present)                   still mode: the field holds one frame
+ *
+ * The @property registrations let the colours transition (2.4 s) when the phase changes.
+ */
+
+@property --sky-top      { syntax: '<color>'; inherits: true; initial-value: #03050d; }
+@property --sky-mid      { syntax: '<color>'; inherits: true; initial-value: #080d22; }
+@property --sky-hot      { syntax: '<color>'; inherits: true; initial-value: #0c1330; }
+@property --sky-low      { syntax: '<color>'; inherits: true; initial-value: #101a3d; }
+@property --light-a      { syntax: '<color>'; inherits: true; initial-value: #2f49c7; }
+@property --light-b      { syntax: '<color>'; inherits: true; initial-value: #2a8fa6; }
+@property --light-c      { syntax: '<color>'; inherits: true; initial-value: #aebdff; }
+@property --light-d      { syntax: '<color>'; inherits: true; initial-value: #4a63c8; }
+@property --ray-warm     { syntax: '<color>'; inherits: true; initial-value: #8fa6ff; }
+@property --ray-cool     { syntax: '<color>'; inherits: true; initial-value: #5a74e6; }
+@property --horizon      { syntax: '<color>'; inherits: true; initial-value: #2a3a8f; }
+@property --mote         { syntax: '<color>'; inherits: true; initial-value: #c9d4ff; }
+@property --ink          { syntax: '<color>'; inherits: true; initial-value: #e9edff; }
+@property --ink-soft     { syntax: '<color>'; inherits: true; initial-value: #b9c0ea; }
+@property --glow         { syntax: '<color>'; inherits: true; initial-value: #dfe6ff; }
+@property --light-opacity { syntax: '<number>'; inherits: true; initial-value: 0.4; }
+@property --ray-opacity   { syntax: '<number>'; inherits: true; initial-value: 0.55; }
+@property --mote-opacity  { syntax: '<number>'; inherits: true; initial-value: 0.35; }
+@property --stars-opacity { syntax: '<number>'; inherits: true; initial-value: 1; }
+
+:root {
+    /* ---- type ---- */
+    --font-display: 'Fraunces Variable', 'Palatino', 'Book Antiqua', 'Palatino Linotype', Georgia, serif;
+
+    /* ---- the white material: anything read or written ---- */
+    --paper: #ffffff;
+    --card: rgba(255, 255, 255, 0.96);
+    --card-ink: #2a2230;
+    --card-ink-soft: #6e6070;
+    --card-rule: rgba(60, 40, 50, 0.12);
+    --accent: #b08d3c;              /* a real gold, on white only; never in the field */
+
+    /* ---- glass: small chrome over the field (the bar, player controls) ---- */
+    --glass: rgba(255, 255, 255, 0.10);
+    --glass-edge: rgba(255, 255, 255, 0.28);
+
+    /* ---- buttons on white ---- */
+    --btn-bg: #e9edff;
+    --btn-edge: rgba(60, 40, 50, 0.14);
+
+    /* ---- the field: night by default, so a frame before field.js runs is never wrong ---- */
+    --sky-top: #03050d; --sky-mid: #080d22; --sky-hot: #0c1330; --sky-low: #101a3d;
+    --light-a: #2f49c7; --light-b: #2a8fa6; --light-c: #aebdff; --light-d: #4a63c8;
+    --ray-warm: #8fa6ff; --ray-cool: #5a74e6; --horizon: #2a3a8f; --mote: #c9d4ff;
+    --ink: #e9edff; --ink-soft: #b9c0ea; --glow: #dfe6ff;
+    --light-opacity: 0.4; --ray-opacity: 0.55; --mote-opacity: 0.35; --stars-opacity: 1;
+
+    /* ---- the bar ---- */
+    --bar-bg: var(--glass);
+    --bar-edge: var(--glass-edge);
+    --bar-ink: var(--ink);
+    --bar-ink-soft: var(--ink-soft);
+
+    /* ---- motion ---- */
+    --phase-duration: 2.4s;
+}
+
+/* The warm hours: a sun, not a sunset's end. No dark reds, no purple. */
+:root[data-phase="dawn"],
+:root[data-phase="dusk"] {
+    --sky-top: #d8432c; --sky-mid: #ea6a2d; --sky-hot: #f9932c; --sky-low: #ffc64d;
+    --light-a: #ff8a3c; --light-b: #ffd36b; --light-c: #ffe9c4; --light-d: #ff7a45;
+    --ray-warm: #ffd96a; --ray-cool: #ff7a3a; --horizon: #ffd25a; --mote: #ffe39a;
+    --ink: #fff8ef; --ink-soft: #fbe6d2; --glow: #ffe2a0;
+    --light-opacity: 0.7; --ray-opacity: 0.85; --mote-opacity: 0.9; --stars-opacity: 0;
+    --glass: rgba(255, 255, 255, 0.16); --glass-edge: rgba(255, 255, 255, 0.45);
+    --btn-bg: #ffeccb;
+    --bar-bg: rgba(255, 255, 255, 0.34); --bar-edge: rgba(255, 255, 255, 0.55);
+    --bar-ink: #2a1008; --bar-ink-soft: #5a2a14;
+}
+
+/* The day: warm white above, blue below, so the rays (born at the horizon) show. White light only. */
+:root[data-phase="day"] {
+    --sky-top: #f9f7f2; --sky-mid: #dfeaf5; --sky-hot: #93bde2; --sky-low: #4a8fcf;
+    --light-a: #ffffff; --light-b: #bfe0ff; --light-c: #ffffff; --light-d: #d9ecff;
+    --ray-warm: #ffffff; --ray-cool: #e8f3ff; --horizon: #ffffff; --mote: #ffffff;
+    --ink: #1f2b47; --ink-soft: #4d5c80; --glow: #7db6ff;
+    --light-opacity: 0.45; --ray-opacity: 0.6; --mote-opacity: 0.5; --stars-opacity: 0;
+    --glass: rgba(255, 255, 255, 0.42); --glass-edge: rgba(255, 255, 255, 0.9);
+    --btn-bg: #e8f0f8;
+    --bar-bg: rgba(255, 255, 255, 0.5); --bar-edge: rgba(255, 255, 255, 0.9);
+    --bar-ink: var(--ink); --bar-ink-soft: var(--ink-soft);
+}
+
+/* Night is the default block above; this keeps the attribute explicit for clarity. */
+:root[data-phase="night"] {
+    --bar-ink: var(--ink); --bar-ink-soft: var(--ink-soft);
+}
+
+/* A white room: the field is away, and chrome goes white with a rule. */
+:root[data-room="white"] {
+    --bar-bg: rgba(255, 255, 255, 0.96);
+    --bar-edge: var(--card-rule);
+    --bar-ink: var(--card-ink);
+    --bar-ink-soft: var(--card-ink-soft);
+}

@@ -1,8 +1,15 @@
 <!DOCTYPE html>
-{{-- is-native comes from the platform flag only (platform.md §3a); CSS and transitions.js read it. --}}
+{{-- is-native comes from the platform flag only (platform.md §3a); CSS and transitions.js read it.
+     data-phase / data-room / data-bar are set by field.js and rooms.js from the clock and the page. --}}
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" @class(['is-native' => \App\Support\Runtime::isMobile()])>
 @include('partials.document-head')
-<body class="app-body bg-stone-50 font-sans text-stone-900 antialiased">
+<body class="app-body antialiased">
+    {{-- The field of light, behind every page. Persisted so the light never restarts; drawn by field.js
+         (architecture/field-persistence.md). A page declares data-room="white" on its root to put it away. --}}
+    @persist('field')
+        <x-field />
+    @endpersist
+
     {{-- The only thing that animates. Each page renders inside it. --}}
     <main class="app-page app-page--with-tabs">
         {{ $slot }}
@@ -17,15 +24,7 @@
          Paths, not absolute URLs: on the phone Laravel builds http://127.0.0.1 links for a page served
          from php://127.0.0.1, and Home's absolute URL has no path at all. --}}
     @persist('tabbar')
-        <nav class="app-tabbar border-t border-stone-200 bg-white text-sm text-stone-500" aria-label="Main">
-            <a href="{{ route('home', absolute: false) }}" data-transition="tab" data-tab-match="/" class="aria-[current=page]:font-semibold aria-[current=page]:text-stone-900">Home</a>
-            {{-- Signing in or out is a full page load, so the persisted bar is rebuilt for the new state. --}}
-            @auth
-                <a href="{{ route('account', absolute: false) }}" data-transition="tab" data-tab-match="/account" class="aria-[current=page]:font-semibold aria-[current=page]:text-stone-900">Account</a>
-            @else
-                <a href="{{ route('sign-in', absolute: false) }}" data-transition="forward">Sign in</a>
-            @endauth
-        </nav>
+        <x-bar />
     @endpersist
 </body>
 </html>
