@@ -8,6 +8,7 @@ use App\Support\Runtime;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Itp\Core\Models\User;
+use Itp\Core\Models\UserSetting;
 use Lightwalker\Sync\Client\SyncClient;
 use LogicException;
 
@@ -15,7 +16,8 @@ use LogicException;
  * Turns an API sign-in into a signed-in app, and ends it again (platform.md §5).
  *
  * The web build shares itp-server's database, so the API has already written the user row.
- * The phone has its own SQLite file, so the row the API returns is written there first. Both
+ * The phone has its own SQLite file, so the rows the API returns (the user, and their settings)
+ * are written there first. Both
  * then sign into their own session against that row and keep the token for later API calls.
  * The phone also keeps the user's id in the keychain, so it stays signed in until sign-out. A
  * browser the user said is theirs keeps its sign-in in a cookie, for 90 days (TrustedBrowser).
@@ -26,6 +28,14 @@ class AppSession
      * The user columns the API returns that the device keeps.
      */
     protected const USER_COLUMNS = ['id', 'email', 'first_name', 'email_verified_at', 'created_at', 'updated_at'];
+
+    /**
+     * The settings columns the API returns that the device keeps.
+     */
+    protected const SETTINGS_COLUMNS = [
+        'id', 'user_id', 'living_with_type', 'living_with_id', 'morning_at', 'why_at', 'evening_at',
+        'morning_reminder', 'why_reminder', 'evening_reminder', 'created_at', 'updated_at',
+    ];
 
     public function __construct(
         protected AuthClient $auth,
@@ -40,6 +50,10 @@ class AppSession
     public function start(SignIn $signIn, bool $trustThisBrowser = false): User
     {
         $user = $this->storeUser($signIn->user);
+
+        if (Runtime::isMobile() && $signIn->settings !== null) {
+            $this->writeSettings($signIn->settings);
+        }
 
         Auth::login($user);
         session()->regenerate();
@@ -153,6 +167,30 @@ class AppSession
         $user->save();
 
         return $user;
+    }
+
+    /**
+     * Write the API's settings row to the phone's database, through the model (platform.md §4).
+     * On the web the row is already in the shared database. It is the server's own copy, so it is
+     * then marked clean, as a pull would leave it: pushing it back could overwrite a change made on
+     * the web since sign-in, and a dirty row is skipped by the next pull.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    protected function writeSettings(array $row): UserSetting
+    {
+        $settings = UserSetting::withTrashed()->find($row['id'])
+            ?? UserSetting::withTrashed()->where('user_id', $row['user_id'])->first()
+            ?? new UserSetting;
+
+        $settings->forceFill(Arr::only($row, self::SETTINGS_COLUMNS));
+        $settings->deleted_at = null;
+        $settings->timestamps = false;
+        $settings->save();
+
+        $settings->newQueryWithoutScopes()->whereKey($settings->getKey())->update(['sync_dirty' => false]);
+
+        return $settings->refresh();
     }
 
     /**

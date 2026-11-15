@@ -3,16 +3,20 @@
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\SignOutController;
 use App\Http\Middleware\EnsureProfileIsComplete;
-use App\Livewire\Account;
+use App\Livewire\About;
 use App\Livewire\CompleteProfile;
 use App\Livewire\CreateItp;
+use App\Livewire\DeleteAccount;
 use App\Livewire\DesignSystem;
 use App\Livewire\Home;
+use App\Livewire\Library;
+use App\Livewire\Prompt;
 use App\Livewire\ShowGeneration;
 use App\Livewire\ShowItp;
 use App\Livewire\ShowUniversalItp;
 use App\Livewire\SignIn;
 use App\Livewire\UpdateRequired;
+use App\Livewire\You;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -29,7 +33,16 @@ Route::middleware('guest')->group(function () {
 Route::middleware(EnsureProfileIsComplete::class)->group(function () {
     Route::livewire('/', Home::class)->name('home');
     Route::livewire('universal/{universalItp:slug}', ShowUniversalItp::class)->name('universals.show');
+    Route::livewire('itps', Library::class)->name('itps.index');
+    Route::livewire('about', About::class)->name('about');
 });
+
+/*
+ * Account deletion (platform.md §5): a page on the web build, for a guest or anyone signed in, so
+ * no first name is needed. A fresh email code is the identity check. The phone links here.
+ */
+Route::livewire('delete-account', DeleteAccount::class)->name('account.delete');
+Route::redirect('account', '/you');
 
 Route::get('media/{key}', MediaController::class)->where('key', '.*')->name('media.show');
 
@@ -38,7 +51,9 @@ Route::middleware('auth')->group(function () {
     Route::post('sign-out', SignOutController::class)->name('sign-out');
 
     Route::middleware(EnsureProfileIsComplete::class)->group(function () {
-        Route::livewire('account', Account::class)->name('account');
+        Route::livewire('you', You::class)->name('you');
+
+        Route::livewire('today/{kind}', Prompt::class)->whereIn('kind', ['morning', 'step', 'evening', 'evidence'])->name('today.prompt');
 
         Route::livewire('itps/create', CreateItp::class)->name('itps.create');
         Route::livewire('itps/{itp}', ShowItp::class)->name('itps.show');

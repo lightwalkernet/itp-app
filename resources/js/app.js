@@ -1,4 +1,5 @@
 import './field'
 import './rooms'
 import './transitions'
+import './clock'
 import './reload-when-expired'

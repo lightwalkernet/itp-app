@@ -25,6 +25,9 @@ return Application::configure(basePath: dirname(__DIR__))
             replace: [PreventRequestForgery::class => PreventRequestForgeryOnWeb::class],
         );
         $middleware->appendToPriorityList(StartSession::class, RestoreDeviceSignIn::class);
+
+        // Written by the page head's script, so it is plain text, not one of Laravel's encrypted cookies.
+        $middleware->encryptCookies(except: ['itp_tz']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

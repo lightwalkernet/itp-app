@@ -1,98 +1,136 @@
-<div class="px-6 py-10" wire:init="refresh">
-    @if ($user !== null)
-        <div class="flex items-start justify-between gap-4">
-            <h1 class="text-2xl font-semibold">Hello, {{ $user->first_name }}</h1>
+{{--
+    Today (brief 1 §3). A light room. The card renders for the server's guess at the hour, then
+    itpSyncClock() (resources/js/clock.js) sends the device's clock if the guess was wrong.
+    Actions that move on (Enter, Keep) dispatch today-navigate, so the page slides like a link.
+--}}
+@php
+    $soon = $itpUrl === null;
+    $prompt = fn (string $kind): string => route('today.prompt', $kind, absolute: false);
+@endphp
+<div data-room="light" class="page-center today"
+     wire:init="refresh"
+     x-data
+     x-init="itpSyncClock($wire)"
+     x-on:today-navigate.window="window.pageTransitions ? window.pageTransitions[$event.detail.direction]($event.detail.url) : Livewire.navigate($event.detail.url)">
+    <header class="col">
+        <p class="living">
+            <span>Living with</span>
+            @if ($soon)
+                <span class="living__name">{{ $itpName }}</span>
+            @else
+                <a class="living__name" href="{{ $itpUrl }}" data-transition="forward">{{ $itpName }}</a>
+            @endif
+        </p>
+        <svg class="arc" viewBox="0 0 400 64" role="img" aria-label="The day’s rhythm">
+            <path class="arc__path" d="M 12 54 Q 200 -20 388 54"/>
+            <circle @class(['arc__sun', 'arc__sun--hidden' => ! $arc['sunVisible']]) r="5" cx="{{ $arc['sunX'] }}" cy="{{ $arc['sunY'] }}"/>
+            <g @class(['arc__pt', 'arc__pt--done' => $arc['morningDone']]) data-point="morning"><circle class="arc__ring" cx="78" cy="34.7" r="4.5"/><circle class="arc__core" cx="78" cy="34.7" r="3"/><text x="78" y="56" text-anchor="middle">morning</text></g>
+            <g @class(['arc__pt', 'arc__pt--done' => $arc['eveningDone']]) data-point="evening"><circle class="arc__ring" cx="322" cy="34.7" r="4.5"/><circle class="arc__core" cx="322" cy="34.7" r="3"/><text x="322" y="56" text-anchor="middle">evening</text></g>
+        </svg>
+    </header>
 
-            <button type="button" wire:click="refresh" class="rounded-lg px-3 py-1.5 text-sm text-stone-500 ring-1 ring-stone-200 disabled:opacity-50" wire:loading.attr="disabled" wire:target="refresh">
-                <span wire:loading.remove wire:target="refresh">Refresh</span>
-                <span wire:loading wire:target="refresh">Refreshing…</span>
-            </button>
-        </div>
+    <div class="col today__cards">
+        <x-card :kicker="$card['kicker']" :title="$card['title']" :quote="$card['quote']" data-card="{{ $card['state'] }}">
+            <p @class(['t-body', 't-soft' => $card['quote']])>{{ $card['line'] }}</p>
+
+            @switch($card['state'])
+                @case('guest')
+                    @if ($soon)
+                        <x-button disabled meta="coming soon">Enter</x-button>
+                    @else
+                        <x-button :href="$itpUrl">Enter</x-button>
+                    @endif
+                    <a class="btn-sec" href="{{ $links['signIn'] }}" data-transition="forward">Sign in — <em>email and a code</em></a>
+                    @break
+
+                @case('morning-enter')
+                    {{-- brief 2: Enter goes to the player, and the play record replaces the session flag. --}}
+                    @if ($soon)
+                        <x-button disabled meta="coming soon">Enter</x-button>
+                    @else
+                        <x-button wire:click="enter">Enter</x-button>
+                    @endif
+                    <a class="btn-sec" href="{{ $links['itps'] }}" data-transition="forward">Something else today? <em>Your ITPs</em></a>
+                    @break
+
+                @case('morning-ask')
+                    <x-button :href="$prompt('morning')">Begin</x-button>
+                    {{-- brief 2: Breathe 11 --}}
+                    @if ($soon)
+                        <button type="button" class="btn-sec" disabled>Or sit a moment longer — <em>Breathe 11</em> · coming soon</button>
+                    @else
+                        <a class="btn-sec" href="{{ $itpUrl }}" data-transition="forward">Or sit a moment longer — <em>Breathe 11</em> · 2 min</a>
+                    @endif
+                    @break
+
+                @case('morning-kept')
+                    {{-- brief 2: Breathe 11 --}}
+                    @if ($soon)
+                        <x-button disabled meta="coming soon">Breathe 11</x-button>
+                    @else
+                        <x-button :href="$itpUrl">Breathe 11 · 2 min</x-button>
+                    @endif
+                    <a class="btn-sec" href="{{ $prompt('step') }}" data-transition="forward">Add one aligned step, if you wish</a>
+                    @break
+
+                @case('afternoon-return')
+                @case('afternoon-why')
+                    {{-- brief 2: Breathe 11 and Return to Coherence open in the player. --}}
+                    <div class="rows">
+                        @if ($soon)
+                            <x-row disabled meta="coming soon">Breathe 11</x-row>
+                        @else
+                            <x-row :href="$itpUrl" :meta="$itpName.' · 2 min'">Breathe 11</x-row>
+                        @endif
+                        @if ($returnUrl === null)
+                            <x-row disabled meta="coming soon">Return to Coherence</x-row>
+                        @else
+                            <x-row :href="$returnUrl" meta="primer · 2 min">Return to Coherence</x-row>
+                        @endif
+                    </div>
+                    <a class="btn-sec" href="{{ $prompt('step') }}" data-transition="forward">Add one aligned step, if you wish</a>
+                    @break
+
+                @case('evening-ask')
+                    <x-button :href="$prompt('evening')">Reflect</x-button>
+                    <button type="button" class="btn-sec" wire:click="notTonight">Not tonight — <em>that’s allowed</em></button>
+                    @break
+
+                @case('evening-evidence')
+                    <x-button :href="$prompt('evidence')">Add to the record</x-button>
+                    @if (! $soon)
+                        <button type="button" class="btn-sec" wire:click="enter">Or enter — <em>{{ $itpName }}</em> · 3 min</button>
+                    @endif
+                    @break
+
+                @case('complete')
+                @case('night-done')
+                    @if ($soon)
+                        <x-button disabled meta="coming soon">Enter</x-button>
+                    @else
+                        <x-button wire:click="enter">{{ $card['state'] === 'complete' ? 'Enter — '.$itpName : 'Enter' }}</x-button>
+                    @endif
+                    {{-- brief 4: the record --}}
+                    <a class="btn-sec" href="{{ $links['record'] }}" data-transition="forward">Open <em>your record</em></a>
+                    @break
+            @endswitch
+        </x-card>
 
         @if ($openGeneration !== null)
-            <a href="{{ route('generations.show', $openGeneration['id'], absolute: false) }}" data-transition="forward" class="mt-6 block rounded-xl bg-stone-900 px-4 py-4 text-white">
-                <span class="block font-medium">Continue your ITP</span>
-                <span class="mt-1 block text-sm text-stone-300">
-                    @switch($openStatus)
-                        @case(\App\Api\GenerationStatus::AwaitingFollowup)
-                            A few questions are waiting for you.
-                            @break
-                        @case(\App\Api\GenerationStatus::AwaitingResonance)
-                            Your attunement is ready to read.
-                            @break
-                        @default
-                            We’re still creating it.
-                    @endswitch
-                </span>
-            </a>
+            @php
+                $openTitle = match ($openStatus) {
+                    \App\Api\GenerationStatus::AwaitingFollowup => 'A few questions are waiting for you.',
+                    \App\Api\GenerationStatus::AwaitingResonance => 'Your attunement is ready to read.',
+                    default => 'We’re still creating it.',
+                };
+            @endphp
+            <x-card class="card--small" kicker="Your ITP is being made" :title="$openTitle">
+                <x-button :href="route('generations.show', $openGeneration['id'], absolute: false)">Continue</x-button>
+            </x-card>
         @endif
+    </div>
 
-        <a href="{{ route('itps.create', absolute: false) }}" data-transition="forward" class="mt-6 block rounded-xl bg-white px-4 py-4 font-medium ring-1 ring-stone-200">
-            Create a personal ITP
-        </a>
-
-        <h2 class="mt-10 text-sm font-medium uppercase tracking-wide text-stone-500">Your ITPs</h2>
-
-        @if ($itps->isEmpty())
-            <p class="mt-3 text-stone-600">Your ITPs will appear here.</p>
-        @else
-            <ul class="mt-3 divide-y divide-stone-200 rounded-xl bg-white ring-1 ring-stone-200">
-                @foreach ($itps as $itp)
-                    <li wire:key="itp-{{ $itp->id }}">
-                        <a href="{{ route('itps.show', $itp, absolute: false) }}" data-transition="forward" class="block px-4 py-3">
-                            <span class="block font-medium">{{ $itp->title }}</span>
-                            @if ($itp->description)
-                                <span class="mt-0.5 block text-sm text-stone-600">{{ $itp->description }}</span>
-                            @endif
-                        </a>
-                    </li>
-                @endforeach
-            </ul>
-        @endif
-    @else
-        <h1 class="text-2xl font-semibold">it’s totally possible</h1>
-        <p class="mt-2 text-stone-600">Choose a Universal ITP that calls to you.</p>
-
-        <a href="{{ route('sign-in', absolute: false) }}" data-transition="forward" class="mt-6 block rounded-xl bg-stone-900 px-4 py-4 text-center font-medium text-white">
-            Sign in or create a free account
-        </a>
-    @endif
-
-    <h2 class="mt-10 text-sm font-medium uppercase tracking-wide text-stone-500">Universal ITPs</h2>
-
-    @if ($universals->isEmpty())
-        <p class="mt-3 text-stone-600">The universal ITPs will appear here.</p>
-    @else
-        <ul class="mt-3 flex flex-col gap-3">
-            @foreach ($universals as $universal)
-                @php($isLocked = $user === null && ! $universal->is_preview)
-                @php($imageUrl = $media->url($universal->image_path))
-                <li wire:key="universal-{{ $universal->id }}">
-                    <a href="{{ $isLocked ? route('sign-in', absolute: false) : route('universals.show', $universal, absolute: false) }}" data-transition="forward" class="flex items-center gap-4 overflow-hidden rounded-xl bg-white ring-1 ring-stone-200">
-                        <span class="relative h-20 w-24 shrink-0 bg-stone-200">
-                            @if ($imageUrl !== null)
-                                <img src="{{ $imageUrl }}" alt="" class="h-full w-full object-cover" loading="lazy">
-                            @endif
-                            @if ($isLocked)
-                                <span class="absolute bottom-1 left-1 rounded-full bg-stone-900/60 p-1 text-white" data-locked>
-                                    <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clip-rule="evenodd"/></svg>
-                                </span>
-                            @endif
-                        </span>
-                        <span class="min-w-0 py-3 pr-4">
-                            <span class="block font-medium">{{ $universal->display_name }}</span>
-                            @if ($universal->description)
-                                <span class="mt-0.5 line-clamp-2 block text-sm text-stone-600">{{ $universal->description }}</span>
-                            @endif
-                            @if ($isLocked)
-                                <span class="mt-1 block text-xs font-medium uppercase tracking-wide text-stone-500">Sign in to play</span>
-                            @endif
-                        </span>
-                    </a>
-                </li>
-            @endforeach
-        </ul>
-    @endif
+    <div></div>
 
     @if ($downloadsPending)
         <div wire:poll.3s="downloadNext" class="sr-only">Downloading audio…</div>

@@ -46,7 +46,7 @@ it('marks the document as native only on the mobile build', function (string $fl
 
     $html = $this->get(route('sign-in'))->assertOk()->getContent();
 
-    expect(str_contains($html, '<html lang="en" class="is-native">'))->toBe($isNative);
+    expect((bool) preg_match('/<html lang="en" class="is-native"[\s>]/', $html))->toBe($isNative);
 })->with([
     'web' => ['server', false],
     'phone' => ['mobile', true],

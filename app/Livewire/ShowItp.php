@@ -2,21 +2,28 @@
 
 namespace App\Livewire;
 
+use App\Livewire\Concerns\ShowsAnItp;
+use App\Media\MediaDownloads;
+use App\Media\MediaLibrary;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Itp\Core\Models\Itp;
+use Itp\Core\Models\UniversalItp;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 /**
- * A finished ITP, as text: the attunement, its Breathe 11 and its Quantum Whys. A local row on
- * the phone, the shared database on the web. Only its owner sees it; anyone else gets a 404.
+ * A personal ITP's page (brief 1 §5), in the same template as a universal one: the attunement,
+ * its Breathe 11 and its Quantum Whys, and its audio where the device has it. A local row on the
+ * phone, the shared database on the web. Only its owner sees it; anyone else gets a 404.
  */
 #[Layout('layouts.app')]
 #[Title('Your ITP')]
 class ShowItp extends Component
 {
+    use ShowsAnItp;
+
     public Itp $itp;
 
     public function mount(Itp $itp): void
@@ -26,15 +33,23 @@ class ShowItp extends Component
         $this->itp = $itp;
     }
 
-    public function render(): View
+    public function render(MediaLibrary $media, MediaDownloads $downloads): View
     {
-        return view('livewire.show-itp', [
-            'paragraphs' => array_values(array_filter(
-                array_map('trim', preg_split('/\R{2,}/', (string) $this->itp->attunement_text)),
-                fn (string $paragraph): bool => $paragraph !== '',
-            )),
-            'breathLines' => collect($this->itp->breath11_lines ?? [])->sortBy('order')->values(),
-            'quantumWhys' => $this->itp->quantum_whys ?? [],
-        ]);
+        return view('livewire.show-itp', $this->itpPage($media, $downloads));
+    }
+
+    protected function shownItp(): UniversalItp|Itp
+    {
+        return $this->itp;
+    }
+
+    protected function canBeLivedWith(): bool
+    {
+        return true;
+    }
+
+    protected function isLockedForGuest(): bool
+    {
+        return false;
     }
 }

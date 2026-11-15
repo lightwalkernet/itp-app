@@ -6,6 +6,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Itp\Core\Models\User;
+use Itp\Core\Models\UserSetting;
 use Livewire\Livewire;
 
 beforeEach(function () {
@@ -57,6 +58,25 @@ it('signs in with a valid code and keeps the token', function () {
     $this->assertAuthenticatedAs($user);
     expect(app(TokenStore::class)->get())->toBe('1|secret');
     Http::assertSent(fn (Request $request) => str_starts_with($request['device_name'], 'Web: '));
+});
+
+it('leaves the settings to the shared database on the web', function () {
+    $user = User::factory()->create(['email' => 'ann@example.com']);
+    $settings = UserSetting::factory()->for($user)->create(['why_at' => '14:30:00']);
+    Http::fake(['api.itp.test/v1/auth/verify-code' => Http::response(['message' => 'Signed in.', 'errors' => (object) [], 'data' => [
+        'user' => ['id' => $user->id, 'email' => $user->email, 'first_name' => $user->first_name],
+        'token' => '1|secret',
+        'needs_profile' => false,
+        'settings' => ['id' => $settings->id, 'user_id' => $user->id, 'why_at' => '09:00:00'],
+    ]])]);
+
+    Livewire::test(SignIn::class)
+        ->set('email', 'ann@example.com')
+        ->set('code', '123456')
+        ->call('verifyCode')
+        ->assertRedirect(route('home'));
+
+    expect($settings->fresh()->why_at)->toBe('14:30:00');
 });
 
 it('sends a user without a first name to the profile screen', function () {

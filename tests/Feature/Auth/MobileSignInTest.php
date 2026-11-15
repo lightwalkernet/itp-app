@@ -8,8 +8,11 @@ use App\Livewire\SignIn;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
+use Itp\Core\Enums\LivingWithType;
 use Itp\Core\Models\Itp;
+use Itp\Core\Models\UniversalItp;
 use Itp\Core\Models\User;
+use Itp\Core\Models\UserSetting;
 use Livewire\Livewire;
 use Native\Mobile\SecureStorage;
 
@@ -52,16 +55,19 @@ beforeEach(function () {
 });
 
 /**
- * itp-server's verify-code answer, as UserResource shapes it.
+ * itp-server's verify-code answer, as UserResource shapes it. A server older than brief 1 sends
+ * no settings.
  *
  * @param  array<string, mixed>  $user
+ * @param  array<string, mixed>|null  $settings  as UserSettingResource shapes it
  */
-function mobileSignInResponse(array $user, bool $needsProfile = false): mixed
+function mobileSignInResponse(array $user, bool $needsProfile = false, ?array $settings = null): mixed
 {
     return Http::response(['message' => 'Signed in.', 'errors' => (object) [], 'data' => [
         'user' => $user + ['email_verified_at' => '2026-11-06T05:57:00.000000Z', 'created_at' => '2026-11-04T09:00:00.000000Z', 'updated_at' => '2026-11-06T05:57:00.000000Z'],
         'token' => '1|secret',
         'needs_profile' => $needsProfile,
+        ...($settings === null ? [] : ['settings' => $settings]),
     ]]);
 }
 
@@ -94,6 +100,58 @@ it('writes the API\'s user row to the phone, then signs in', function () {
     $this->assertAuthenticatedAs($user);
     expect($this->keychain->items)->toBe(['itp.api_token' => '1|secret', 'itp.user_id' => $id]);
     Http::assertSent(fn (Request $request) => str_starts_with($request['device_name'], 'Mobile: '));
+});
+
+it('writes the user\'s settings to the phone too', function () {
+    $id = strtolower((string) Str::ulid());
+    $settingsId = strtolower((string) Str::ulid());
+    $universal = UniversalItp::factory()->create();
+    Http::fake(['api.itp.test/v1/auth/verify-code' => mobileSignInResponse(['id' => $id, 'email' => 'ann@example.com', 'first_name' => 'Ann'], settings: [
+        'id' => $settingsId,
+        'user_id' => $id,
+        'living_with_type' => 'universal',
+        'living_with_id' => $universal->id,
+        'morning_at' => '06:45:00',
+        'why_at' => '15:00:00',
+        'evening_at' => '20:00:00',
+        'morning_reminder' => true,
+        'why_reminder' => false,
+        'evening_reminder' => true,
+        'created_at' => '2026-11-04T09:00:00.000000Z',
+        'updated_at' => '2026-11-06T05:57:00.000000Z',
+    ])]);
+
+    Livewire::test(SignIn::class)
+        ->set('email', 'ann@example.com')
+        ->set('code', '123456')
+        ->call('verifyCode')
+        ->assertRedirect(route('home'));
+
+    $settings = UserSetting::sole();
+    expect($settings->id)->toBe($settingsId)
+        ->and($settings->user_id)->toBe($id)
+        ->and($settings->living_with_type)->toBe(LivingWithType::Universal)
+        ->and($settings->livingWith()?->is($universal))->toBeTrue()
+        ->and($settings->morning_at)->toBe('06:45:00')
+        ->and($settings->why_at)->toBe('15:00:00')
+        ->and($settings->evening_at)->toBe('20:00:00')
+        ->and($settings->why_reminder)->toBeFalse()
+        ->and($settings->updated_at->toIso8601String())->toBe('2026-11-06T05:57:00+00:00')
+        ->and($settings->sync_dirty)->toBeFalse();
+});
+
+it('signs in without settings from a server that doesn\'t send them', function () {
+    $id = strtolower((string) Str::ulid());
+    Http::fake(['api.itp.test/v1/auth/verify-code' => mobileSignInResponse(['id' => $id, 'email' => 'ann@example.com', 'first_name' => 'Ann'])]);
+
+    Livewire::test(SignIn::class)
+        ->set('email', 'ann@example.com')
+        ->set('code', '123456')
+        ->call('verifyCode')
+        ->assertHasNoErrors()
+        ->assertRedirect(route('home'));
+
+    expect(UserSetting::count())->toBe(0);
 });
 
 it('updates the phone\'s copy when the same user signs in again', function () {
@@ -156,7 +214,7 @@ it('stays signed in from the keychain when the session is gone', function () {
 it('asks for sign-in again when the keychain\'s user is no longer on the phone', function () {
     $this->keychain->items = ['itp.api_token' => '1|secret', 'itp.user_id' => strtolower((string) Str::ulid())];
 
-    $this->get(route('account'))->assertRedirect(route('sign-in'));
+    $this->get(route('you'))->assertRedirect(route('sign-in'));
 
     $this->assertGuest();
     expect($this->keychain->items)->toBe([]);
@@ -166,7 +224,7 @@ it('needs both the token and the user to restore a sign-in', function (array $ke
     $user = User::factory()->create();
     $this->keychain->items = array_map(fn (string $value) => $value === 'user' ? $user->id : $value, $keychain);
 
-    $this->get(route('account'))->assertRedirect(route('sign-in'));
+    $this->get(route('you'))->assertRedirect(route('sign-in'));
 
     $this->assertGuest();
 })->with([
@@ -179,7 +237,7 @@ it('never restores a sign-in from the keychain on the web build', function () {
     $user = User::factory()->create();
     $this->keychain->items = ['itp.api_token' => '1|secret', 'itp.user_id' => $user->id];
 
-    $this->get(route('account'))->assertRedirect(route('sign-in'));
+    $this->get(route('you'))->assertRedirect(route('sign-in'));
 
     $this->assertGuest();
 });

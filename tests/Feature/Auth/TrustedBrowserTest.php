@@ -80,7 +80,7 @@ it('signs a trusted browser back in, with its API token, when the session has go
     $user = User::factory()->create();
 
     $this->withCookie(TrustedBrowser::COOKIE, trustedBrowserCookie($user))
-        ->get(route('account'))
+        ->get(route('you'))
         ->assertOk();
 
     $this->assertAuthenticatedAs($user);
@@ -91,7 +91,7 @@ it('asks for sign-in again once the 90 days are up', function () {
     $user = User::factory()->create();
 
     $this->withCookie(TrustedBrowser::COOKIE, trustedBrowserCookie($user, now()->subMinute()->getTimestamp()))
-        ->get(route('account'))
+        ->get(route('you'))
         ->assertRedirect(route('sign-in'));
 
     $this->assertGuest();
@@ -99,7 +99,7 @@ it('asks for sign-in again once the 90 days are up', function () {
 
 it('stops trusting the browser when its user no longer exists', function () {
     $this->withCookie(TrustedBrowser::COOKIE, trustedBrowserCookie(strtolower((string) Str::ulid())))
-        ->get(route('account'))
+        ->get(route('you'))
         ->assertRedirect(route('sign-in'))
         ->assertCookieExpired(TrustedBrowser::COOKIE);
 

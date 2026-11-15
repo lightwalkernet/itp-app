@@ -21,9 +21,7 @@ beforeEach(function () {
 it('writes the bundled rows to the phone on the first request, without moving the sync cursors', function () {
     useContentBundle(contentSnapshot());
 
-    $this->get(route('home'))
-        ->assertOk()
-        ->assertSeeInOrder(['Introduction', 'Awaken Wonder', 'Purpose']);
+    $this->get(route('home'))->assertOk();
 
     $awaken = UniversalItp::find('01m6skvqm3ddj4z6bqn2dydy0m');
     expect(UniversalItp::count())->toBe(3)

@@ -3,7 +3,7 @@
 
     <x-button href="{{ route('…', absolute: false) }}" transition="forward" meta="attunement · 3 min">Enter</x-button>
     <x-button variant="ghost">Make a new personal ITP</x-button>
-    <x-button variant="light">Begin</x-button>          {{-- on the field, not on white --}}
+    <x-button variant="light">Begin</x-button>          (on the field, not on white)
 --}}
 @props(['href' => null, 'variant' => 'primary', 'meta' => null, 'transition' => 'forward', 'type' => 'button'])
 @php

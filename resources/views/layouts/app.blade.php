@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 {{-- is-native comes from the platform flag only (platform.md §3a); CSS and transitions.js read it.
-     data-phase / data-room / data-bar are set by field.js and rooms.js from the clock and the page. --}}
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" @class(['is-native' => \App\Support\Runtime::isMobile()])>
+     data-room / data-bar / data-scene come from the page (PageRoom) so the first frame is the right room, and
+     data-phase / data-still from the inline script in the head, before anything is drawn. field.js and
+     rooms.js keep them right after that. --}}
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" @class(['is-native' => \App\Support\Runtime::isMobile()]) @foreach (\App\Support\PageRoom::attributes((string) $slot) as $name => $value) {{ $name }}="{{ $value }}" @endforeach>
 @include('partials.document-head')
 <body class="app-body antialiased">
     {{-- The field of light, behind every page. Persisted so the light never restarts; drawn by field.js

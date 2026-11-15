@@ -32,6 +32,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Web build
+    |--------------------------------------------------------------------------
+    |
+    | Where the web build lives. The phone has no deletion screen: You →
+    | Delete account opens this host's /delete-account in the browser
+    | (platform.md §5).
+    |
+    */
+
+    'web_url' => env('ITP_WEB_URL', 'https://app.itstotallypossible.life'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Trusted browsers
     |--------------------------------------------------------------------------
     |

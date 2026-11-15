@@ -57,13 +57,11 @@ it('pulls content without a token, applies it and moves the cursor on', function
         ],
     ])]);
 
-    $home = Livewire::test(Home::class)
-        ->assertSee('Retired ITP')
-        ->call('refresh')
-        ->assertSee('Fresh from Studio')
-        ->assertDontSee('Retired ITP');
+    $home = Livewire::test(Home::class)->call('refresh');
 
-    expect(UniversalItp::find('01jc00000000000000000000u1')->quantum_whys)->toBe(['Why is this so easy?'])
+    expect(UniversalItp::find('01jc00000000000000000000u1')->short_name)->toBe('Fresh from Studio')
+        ->and(UniversalItp::find('01jc00000000000000000000u1')->quantum_whys)->toBe(['Why is this so easy?'])
+        ->and(UniversalItp::find($retired->id))->toBeNull()
         ->and(Wildcard::sole()->why)->toBe('Why does it keep getting better?')
         ->and(DB::table('sync_cursors')->pluck('cursor', 'type')->all())->toBe(['universal_itps' => 7, 'wildcards' => 9]);
     Http::assertSent(fn (Request $request) => str_contains($request->url(), 'content/pull?type=universal_itps&after=0')
@@ -77,14 +75,15 @@ it('pulls content without a token, applies it and moves the cursor on', function
 });
 
 it('keeps showing what the phone has when the content pull fails', function () {
-    UniversalItp::factory()->preview()->create(['short_name' => 'Already here']);
+    $here = UniversalItp::factory()->preview()->create(['short_name' => 'Already here']);
     Http::fake(['api.itp.test/v1/content/pull*' => fn () => throw new ConnectionException('Offline')]);
 
     Livewire::test(Home::class)
         ->call('refresh')
-        ->assertHasNoErrors()
-        ->assertSee('Already here');
+        ->assertOk()
+        ->assertHasNoErrors();
 
+    $this->assertModelExists($here);
     expect(DB::table('sync_cursors')->count())->toBe(0);
 });
 

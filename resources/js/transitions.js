@@ -7,7 +7,7 @@
  * handling can't race with ours. We call Livewire.navigate() ourselves.
  *
  * Pages slide on the mobile build only (html.is-native). The web build navigates the same way,
- * with no animation.
+ * with a quiet fade instead.
  */
 
 const root = document.documentElement
@@ -109,18 +109,45 @@ function tab(link) {
 }
 
 // The tab bar is @persist-ed, so Blade can't update its active state. Do it here.
+// data-tab-match holds one or more path prefixes, space-separated.
+function matchLength(tab) {
+    return Math.max(-1, ...tab.dataset.tabMatch.split(' ')
+        .filter(prefix => prefix && (prefix === '/' ? location.pathname === '/' : location.pathname.startsWith(prefix)))
+        .map(prefix => prefix.length))
+}
+
 function syncTabs() {
     const tabs = [...document.querySelectorAll('a[data-transition="tab"]')]
-    // Longest matching prefix wins, so /account beats /
+    // Longest matching prefix wins. "/" matches the home page only, so a page under no tab lights none.
     const active = tabs
-        .filter(t => location.pathname.startsWith(t.dataset.tabMatch))
-        .sort((a, b) => b.dataset.tabMatch.length - a.dataset.tabMatch.length)[0]
+        .filter(t => matchLength(t) >= 0)
+        .sort((a, b) => matchLength(b) - matchLength(a))[0]
     tabs.forEach(t => t === active
         ? t.setAttribute('aria-current', 'page')
         : t.removeAttribute('aria-current'))
 }
 
 document.addEventListener('livewire:navigated', syncTabs)
+
+/*
+ * The web build has no slides: the page fades out while the next one loads, and fades back in
+ * (brief 1 §7, transitions.css). Livewire's swap copies the new <html> attributes over the live
+ * ones, which drops is-fading, so it is put back for the new page's first frame, then lifted.
+ */
+let fading = false
+
+document.addEventListener('livewire:navigating', () => {
+    if (canAnimate()) return
+    fading = true
+    root.classList.add('is-fading')
+})
+
+document.addEventListener('livewire:navigated', () => {
+    if (!fading) return
+    fading = false
+    root.classList.add('is-fading')
+    requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove('is-fading')))
+})
 
 // Hardware / gesture back that we didn't start: keep our stack in step.
 window.addEventListener('popstate', () => {

@@ -1,8 +1,8 @@
 <?php
 
-use App\Livewire\Account;
 use App\Livewire\Home;
 use App\Livewire\UpdateRequired;
+use App\Livewire\You;
 use Itp\Core\Models\Itp;
 use Itp\Core\Models\UniversalItp;
 use Itp\Core\Models\User;
@@ -13,20 +13,22 @@ beforeEach(function () {
 
 it('sends guests to sign in', function (string $route) {
     $this->get(route($route))->assertRedirect(route('sign-in'));
-})->with(['account', 'profile', 'itps.create']);
+})->with(['you', 'profile', 'itps.create']);
 
 it('sends a user without a first name to the profile screen on every visit', function (string $route) {
     $this->actingAs(User::factory()->withoutFirstName()->create())
         ->get(route($route))
         ->assertRedirect(route('profile'));
-})->with(['home', 'account', 'itps.create']);
+})->with(['home', 'you', 'itps.index', 'itps.create']);
 
 it('greets the user at home, with the tab bar', function () {
+    $this->travelTo('2026-11-16 09:00:00');
+
     $this->actingAs(User::factory()->create(['first_name' => 'Ann']))
         ->get(route('home'))
         ->assertOk()
         ->assertSeeLivewire(Home::class)
-        ->assertSee('Hello, Ann')
+        ->assertSee('Living with')
         ->assertSee('data-transition="tab"', escape: false);
 });
 
@@ -38,38 +40,55 @@ it('links between screens by path, never by absolute URL', function () {
     $user = User::factory()->create();
     $itp = Itp::factory()->for($user)->create();
     $universal = UniversalItp::factory()->preview()->create();
-    $locked = UniversalItp::factory()->create();
+    UniversalItp::factory()->base()->create(['slug' => 'meet-your-itp-self']);
 
     $this->get(route('home'))
         ->assertSee('href="/sign-in" data-transition="forward"', escape: false)
-        ->assertSee('href="/universal/'.$universal->slug.'" data-transition="forward"', escape: false)
+        ->assertSee('href="/universal/meet-your-itp-self" data-transition="forward"', escape: false)
         ->assertDontSee('href="'.url('/'), escape: false);
 
     $this->actingAs($user);
 
     $this->get(route('home'))
         ->assertSee('href="/" data-transition="tab"', escape: false)
-        ->assertSee('href="/account" data-transition="tab"', escape: false)
-        ->assertSee('href="/itps/create" data-transition="forward"', escape: false)
-        ->assertSee('href="/itps/'.$itp->id.'" data-transition="forward"', escape: false)
-        ->assertSee('href="/universal/'.$locked->slug.'" data-transition="forward"', escape: false)
+        ->assertSee('href="/itps" data-transition="tab"', escape: false)
+        ->assertSee('href="/you" data-transition="tab"', escape: false)
+        ->assertSee('href="/universal/meet-your-itp-self" data-transition="forward"', escape: false)
         ->assertDontSee('href="'.url('/'), escape: false);
 
-    $this->get(route('account'))
-        ->assertSee('action="/sign-out"', escape: false);
+    $this->get(route('you'))
+        ->assertSee('action="/sign-out"', escape: false)
+        ->assertSee('href="/itps" data-transition="forward"', escape: false)
+        ->assertSee('href="/universal/meet-your-itp-self" data-transition="forward"', escape: false)
+        ->assertSee('href="/about" data-transition="forward"', escape: false)
+        ->assertSee('href="/delete-account" data-transition="forward"', escape: false)
+        ->assertDontSee('href="'.url('/'), escape: false);
 
-    foreach ([route('itps.create'), route('itps.show', $itp), route('universals.show', $universal)] as $screen) {
+    $this->get(route('itps.index', ['tab' => 'personal']))
+        ->assertSee('href="/itps/'.$itp->id.'" data-transition="forward"', escape: false)
+        ->assertSee('href="/itps/create" data-transition="forward"', escape: false)
+        ->assertDontSee('href="'.url('/'), escape: false);
+
+    $this->get(route('itps.index'))
+        ->assertSee('href="/universal/'.$universal->slug.'" data-transition="forward"', escape: false)
+        ->assertDontSee('href="'.url('/'), escape: false);
+
+    $this->get(route('itps.create'))
+        ->assertSee('href="/" data-transition="back"', escape: false)
+        ->assertDontSee('href="'.url('/'), escape: false);
+
+    foreach ([route('itps.show', $itp), route('universals.show', $universal)] as $screen) {
         $this->get($screen)
-            ->assertSee('href="/" data-transition="back"', escape: false)
+            ->assertSee('href="/itps" data-transition="back"', escape: false)
             ->assertDontSee('href="'.url('/'), escape: false);
     }
 });
 
-it('shows the account and a sign-out form', function () {
+it('shows You, with the account and a sign-out form', function () {
     $this->actingAs(User::factory()->create(['first_name' => 'Ann', 'email' => 'ann@example.com']))
-        ->get(route('account'))
+        ->get(route('you'))
         ->assertOk()
-        ->assertSeeLivewire(Account::class)
+        ->assertSeeLivewire(You::class)
         ->assertSee('ann@example.com')
         ->assertSee('Sign out');
 });

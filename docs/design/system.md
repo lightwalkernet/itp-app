@@ -36,7 +36,7 @@ Light rooms: Today, the player, Breathe 11, the Why, the making, the beginning. 
 - Phase palettes: dawn/dusk a sun (`#d8432c → #ffc64d`), day warm-white-to-blue, night indigo. Only `tokens.css` holds colours.
 - Nothing animates in CSS inside a persisted region. Motion is the canvas (field.js), CSS transitions on state changes, or Alpine transitions on page content.
 - Links use `data-transition="forward|back|tab"`, never `wire:navigate` (`.ai/rules/platform.md` §8). `<x-button href>` and `<x-row href>` do this for you.
-- The bar's ITPs tab points home until a library route exists (`itps.index`); the Return sheet's rows point home until the player route exists. Both are marked in the Blade.
+- The bar's tabs match one or more path prefixes (`data-tab-match="/itps /universal"`), so an ITP's page lights ITPs and About lights You. The Return sheet's rows point home until the player route exists (marked in the Blade).
 
 ## Still to do in the build
 

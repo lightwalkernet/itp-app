@@ -31,7 +31,7 @@ class AuthClient extends ApiClient
             'device_name' => $deviceName,
         ], errorField: 'code');
 
-        return new SignIn($data['user'], $data['token'], (bool) $data['needs_profile']);
+        return new SignIn($data['user'], $data['token'], (bool) $data['needs_profile'], $data['settings'] ?? null);
     }
 
     /**
