@@ -1,5 +1,5 @@
 /*
- * The bar (design/direction.md "Navigation"): Today · Return · ITPs · You.
+ * The bar (docs/design/direction.md "Navigation"): Today · Return · ITPs · You.
  *
  * Persisted in the layout (@persist('tabbar')), so it never re-renders; its colour follows the
  * tokens in tokens.css, which follow html[data-phase] and html[data-room]. Pages that are places

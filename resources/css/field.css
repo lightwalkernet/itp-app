@@ -1,5 +1,5 @@
 /*
- * The field of light (design/direction.md "Light"; architecture/field-persistence.md).
+ * The field of light (docs/design/direction.md "Light"; docs/architecture/field-persistence.md).
  *
  * The field sits in the layout inside @persist('field'), fixed behind every page. Only two things
  * here are CSS: the sky gradient and the grain. Everything that moves (light forms, rays, motes,

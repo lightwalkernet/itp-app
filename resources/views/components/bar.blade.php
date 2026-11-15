@@ -1,5 +1,5 @@
 {{--
-    The bar: Today · Return · ITPs · You (design/direction.md "Navigation").
+    The bar: Today · Return · ITPs · You (docs/design/direction.md "Navigation").
 
     Rendered once inside @persist('tabbar') in the layout. Links use data-transition="tab" and a
     data-tab-match prefix, which transitions.js uses to keep aria-current right after each swap

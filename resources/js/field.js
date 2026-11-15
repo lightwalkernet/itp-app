@@ -1,5 +1,5 @@
 /*
- * The field of light (design/direction.md "Light"; architecture/field-persistence.md).
+ * The field of light (docs/design/direction.md "Light"; docs/architecture/field-persistence.md).
  *
  * Draws everything that moves — the soft light forms, the horizon glow, the rays born at the
  * horizon, the rising motes and the night stars — on two canvases that live inside

@@ -5,7 +5,7 @@
 @include('partials.document-head')
 <body class="app-body antialiased">
     {{-- The field of light, behind every page. Persisted so the light never restarts; drawn by field.js
-         (architecture/field-persistence.md). A page declares data-room="white" on its root to put it away. --}}
+         (docs/architecture/field-persistence.md). A page declares data-room="white" on its root to put it away. --}}
     @persist('field')
         <x-field />
     @endpersist

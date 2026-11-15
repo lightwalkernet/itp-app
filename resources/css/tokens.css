@@ -1,5 +1,5 @@
 /*
- * Design tokens (design/direction.md in the ITP Project).
+ * Design tokens (docs/design/direction.md, docs/design/system.md).
  *
  * Everything the field, the bar and the components colour themselves with lives here, as custom
  * properties on :root. Three attributes on <html> drive them, and nothing else does:

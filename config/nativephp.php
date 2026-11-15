@@ -298,6 +298,8 @@ return [
         'storage/logs/laravel.log',
         // Audio a development phone or simulator downloaded. Bundled media ships from public/media.
         'storage/app/media',
+        // Design and architecture notes, including the Codex's creation method (platform.md §3). Never on a phone.
+        'docs',
     ],
 
     /*

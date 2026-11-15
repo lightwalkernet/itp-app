@@ -1,5 +1,5 @@
 /*
- * Rooms (architecture/field-persistence.md): each page declares what kind of place it is on its
+ * Rooms (docs/architecture/field-persistence.md): each page declares what kind of place it is on its
  * root element, and this copies that to <html>, where the tokens read it.
  *
  *   <div data-room="white">          a white room: the field fades out (Your ITPs, an ITP's page, the record, You)
