@@ -571,11 +571,7 @@ a.living__name:focus-visible { outline: 2px solid var(--glow); outline-offset: 2
 .itp-title--personal { font-style: italic; }
 .itp-desc { margin-top: 14px; color: var(--card-ink); }
 .itp-desc__ask { display: block; margin-bottom: 6px; color: var(--card-ink-soft); }
-.itp-audio { display: block; width: 100%; margin-top: 12px; }
-.itp-status { margin: 8px 0 0; text-align: center; }
 .itp-note { margin-top: 12px; }
-.itp-living { text-align: center; }
-.itp-folds { margin-top: 14px; }
 .row[aria-disabled="true"] { cursor: default; }
 .row[aria-disabled="true"]:hover { color: var(--card-ink); }
 
@@ -605,3 +601,340 @@ a.living__name:focus-visible { outline: 2px solid var(--glow); outline-offset: 2
 .delete-copy { margin-top: 14px; }
 .field-input--code { text-align: center; letter-spacing: 0.4em; }
 .field-error { margin: 8px 0 0; font-size: 16px; font-style: italic; color: var(--card-ink); }
+
+/* The original menu, simpler ITP pages (17 Nov) */
+
+/* An ITP's page: Make this my ITP (or the note), then its pieces into the player. The ITP itself
+   spans the row; Breathe 11 and a Quantum Why sit side by side under it. */
+.emblem + .itp-title { margin-top: 16px; }
+.itp-chosen { margin-top: 18px; text-align: center; }
+.itp-play {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 18px;
+}
+.itp-play .btn {
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    margin: 0;
+    padding: 12px 14px;
+    color: var(--card-ink);
+    text-align: center;
+}
+.itp-play .btn:first-child { grid-column: 1 / -1; }
+.itp-play .btn:disabled { opacity: 1; color: var(--card-ink-soft); }
+
+/* The player and the welcome (original itpmobile, ported) */
+
+/*
+ * The player (resources/js/player.js) and the first-launch welcome, from itpmobile's
+ * player/{words,controls,play}, breath.scss and sections/welcome. Light rooms with the bar away,
+ * in the light-room ink. The player page isn't persisted, so CSS keyframes are fine here: the
+ * animate.css fades the original used (1 s, fill both), written out below.
+ */
+
+@keyframes player-fade-in-down {
+    from { opacity: 0; transform: translate3d(0, -100%, 0); }
+    to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes player-fade-out-down {
+    from { opacity: 1; }
+    to { opacity: 0; transform: translate3d(0, 100%, 0); }
+}
+@keyframes player-fade-out-up {
+    from { opacity: 1; }
+    to { opacity: 0; transform: translate3d(0, -100%, 0); }
+}
+@keyframes player-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes player-fade-out {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+/* The page: a full screen, without the bar's padding under it. */
+.app-page:has(> .player),
+.app-page:has(> .welcome) { padding-bottom: 0; }
+
+.player,
+.welcome {
+    position: relative;
+    min-height: calc(100dvh - env(safe-area-inset-top));
+    color: var(--ink);
+    transition: color var(--phase-duration) ease;
+}
+
+.player-stage {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100dvh - env(safe-area-inset-top));
+    overflow: hidden;
+}
+.player-stage__middle {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+}
+.player-stage.is-paused * { animation-play-state: paused; }
+
+/* The ITP mark over the Introduction, crisp over its blurred ghost */
+.player-mark {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    width: 100px;
+    height: 100px;
+    transform: translateX(-50%);
+    filter: drop-shadow(0 20px 13px rgba(0, 0, 0, 0.03)) drop-shadow(0 8px 5px rgba(0, 0, 0, 0.08));
+}
+.player-mark .player-icon { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; }
+.player-mark .player-mark__ghost { filter: blur(4px); }
+
+/* Timed words: every sentence stacked, two layers each (the crisp words over blurred ghosts) */
+.player-words {
+    position: relative;
+    width: 100%;
+    height: 18rem;
+    font-size: 2.25rem;
+    line-height: 1.25;
+    font-variation-settings: 'opsz' 48, 'SOFT' 50;
+}
+@media (min-width: 1024px) {
+    .player-words { font-size: 3.75rem; }
+}
+.player-words__slot {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 24px;
+    line-height: 1.625;
+}
+.player-sentence {
+    position: relative;
+    display: grid;
+    width: 100%;
+}
+.player-sentence[data-state="hidden"] { display: none; }
+.player-sentence[data-state="in"] { animation: player-fade-in-down 1s both; }
+.player-sentence[data-state="out"] { animation: player-fade-out-down 1s both; }
+.player-sentence__text,
+.player-sentence__ghosts {
+    grid-column: 1;
+    grid-row: 1;
+    width: 100%;
+    text-align: center;
+    hyphens: none;
+    overflow-wrap: normal;
+    word-break: normal;
+}
+.player-sentence__text { z-index: 1; }
+.player-sentence__ghosts { z-index: 0; }
+.player-word { display: inline-block; }
+.player-word[data-up] { animation: player-fade-out-up 1s both; }
+.player-word__ghost { display: inline-block; filter: blur(4px); }
+
+/* Breathe 11's lines (and "And so it is") fade where the attunement's slide */
+.player-words--breathe .player-sentence[data-state="in"] { animation-name: player-fade-in; }
+.player-words--breathe .player-sentence[data-state="out"] { animation-name: player-fade-out; }
+
+/* Glass controls: stop · play/pause · restart (or back, for a Why), a second after starting.
+   In the bar's glass and ink, which read at every hour. */
+.player-controls {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    z-index: 30;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    margin-bottom: 32px;
+    padding-bottom: env(safe-area-inset-bottom);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 1s ease-in-out;
+}
+.player-controls.is-shown { opacity: 1; pointer-events: auto; }
+.player-control,
+.player-play__button {
+    appearance: none;
+    -webkit-appearance: none;
+    display: flex;
+    padding: 4px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--bar-bg);
+    color: var(--bar-ink);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    cursor: pointer;
+    transition: background 1s ease-in-out;
+}
+.player-control:hover,
+.player-play__button:hover { background: var(--bar-edge); }
+.player-control:focus-visible,
+.player-play__button:focus-visible,
+.player-skip__button:focus-visible { outline: 2px solid var(--glow); outline-offset: 3px; }
+.player-control__inner,
+.player-play__inner {
+    display: flex;
+    padding: 4px;
+    border-radius: 999px;
+    background: var(--glass);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+}
+.player-icon { display: block; width: 32px; height: 32px; padding: 4px; }
+.player-icon--lg { width: 48px; height: 48px; }
+.player-icon--xl { width: 64px; height: 64px; padding: 0; }
+
+/* The big play button: audio starts from a tap */
+.player-play {
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+}
+.player-play__button { padding: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1); }
+.player-play__inner { padding: 40px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1); }
+.player-play__failed { margin: 0; }
+
+/* skip intro? (the Introduction from the welcome) */
+.player-skip {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    z-index: 30;
+    width: 100%;
+    padding: 16px 0 calc(16px + env(safe-area-inset-bottom));
+    text-align: center;
+}
+.player-skip__button {
+    appearance: none;
+    -webkit-appearance: none;
+    min-height: 44px;
+    padding: 8px 16px;
+    border: 0;
+    background: none;
+    color: var(--ink);
+    font: inherit;
+    font-size: 16px;
+    cursor: pointer;
+    filter: drop-shadow(0 4px 3px rgba(0, 0, 0, 0.07));
+}
+
+/* Breathe 11's pacer: the ripple grows to 95% on each in-breath and back to 30% on each out */
+.breath {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 999px;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+}
+.breath.is-shown { opacity: 1; }
+.breath__words {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.breath__ripple {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    transform: translate(-50%, -50%);
+    border: 2px solid var(--glass-edge);
+    border-radius: 999px;
+    background: var(--glass);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    opacity: 0;
+}
+.breath__label {
+    position: relative;
+    height: calc(40px + 1.75rem);
+    padding-top: 40px;
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    text-align: center;
+}
+.breath__label-text,
+.breath__label-ghost { position: absolute; left: 0; width: 100%; }
+.breath__label-text { z-index: 1; }
+.breath__label-ghost { z-index: 0; filter: blur(4px); }
+
+/* The player can't play this here (yet) */
+.player-unavailable {
+    min-height: calc(100dvh - env(safe-area-inset-top));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    text-align: center;
+}
+.player-unavailable .back { margin: 12px 0 0; }
+
+/* The welcome: It's / totally / possible, and Enter the Field */
+.welcome {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    text-align: center;
+}
+.welcome__title {
+    margin: 0;
+    font-weight: 400;
+    font-size: 3.75rem;
+    line-height: 1;
+    text-transform: uppercase;
+    font-variation-settings: 'opsz' 96, 'SOFT' 40;
+}
+.welcome__title span { display: block; padding-bottom: 16px; }
+.welcome__enter {
+    display: block;
+    margin-top: 40px;
+    padding: 2px;
+    border: 1px solid var(--glass-edge);
+    border-radius: 4px;
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    color: var(--ink);
+    text-decoration: none;
+}
+.welcome__enter-inner {
+    display: block;
+    padding: 12px 0;
+    border: 1px solid var(--glass-edge);
+    border-radius: 4px;
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    font-size: 1.125rem;
+    transition: all 0.3s ease-in-out;
+}
+.welcome__enter:hover .welcome__enter-inner { background: var(--paper); color: var(--card-ink); }
+.welcome__enter:focus-visible { outline: 2px solid var(--glow); outline-offset: 3px; }

@@ -5,7 +5,6 @@ namespace App\Livewire;
 use App\Livewire\Concerns\ShowsAnItp;
 use App\Media\MediaDownloads;
 use App\Media\MediaLibrary;
-use App\Support\LivingWith;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Itp\Core\Enums\UniversalItpKind;
@@ -15,9 +14,9 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 /**
- * A universal ITP's page (brief 1 §5): its words, its Breathe 11 and Quantum Whys, and its audio
- * where the device has it. Everyone can read every one; guests can listen to the previews only.
- * The player arrives in brief 2; until then Enter plays a plain audio element.
+ * A universal ITP's page (player contract item 4): its name and description, Make this my ITP,
+ * and its pieces into the player. Everyone can open every one; guests can play and choose the
+ * previews only, and are asked to sign in for the rest.
  */
 #[Layout('layouts.app')]
 class ShowUniversalItp extends Component
@@ -46,16 +45,6 @@ class ShowUniversalItp extends Component
     protected function shownItp(): UniversalItp|Itp
     {
         return $this->universalItp;
-    }
-
-    /**
-     * The Universals, and Meet Your ITP Self. Not a primer (for a moment, not a day), and not the
-     * other base pieces such as the Introduction.
-     */
-    protected function canBeLivedWith(): bool
-    {
-        return $this->universalItp->kind === UniversalItpKind::Universal
-            || $this->universalItp->slug === LivingWith::DEFAULT_SLUG;
     }
 
     protected function isLockedForGuest(): bool

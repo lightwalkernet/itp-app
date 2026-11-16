@@ -3,6 +3,7 @@
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\SignOutController;
 use App\Http\Middleware\EnsureProfileIsComplete;
+use App\Http\Middleware\EnsureWelcomed;
 use App\Livewire\About;
 use App\Livewire\CompleteProfile;
 use App\Livewire\CreateItp;
@@ -10,13 +11,16 @@ use App\Livewire\DeleteAccount;
 use App\Livewire\DesignSystem;
 use App\Livewire\Home;
 use App\Livewire\Library;
+use App\Livewire\Player;
 use App\Livewire\Prompt;
 use App\Livewire\ShowGeneration;
 use App\Livewire\ShowItp;
 use App\Livewire\ShowUniversalItp;
 use App\Livewire\SignIn;
 use App\Livewire\UpdateRequired;
+use App\Livewire\Welcome;
 use App\Livewire\You;
+use App\Support\PlayLink;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -31,7 +35,12 @@ Route::middleware('guest')->group(function () {
  * A signed-in user without a first name is still sent to the profile screen first.
  */
 Route::middleware(EnsureProfileIsComplete::class)->group(function () {
-    Route::livewire('/', Home::class)->name('home');
+    Route::livewire('/', Home::class)->middleware(EnsureWelcomed::class)->name('home');
+    Route::livewire('welcome', Welcome::class)->name('welcome');
+    Route::livewire('play/{source}/{key}/{piece}', Player::class)
+        ->whereIn('source', ['universal', 'itp'])
+        ->whereIn('piece', PlayLink::PIECES)
+        ->name('play');
     Route::livewire('universal/{universalItp:slug}', ShowUniversalItp::class)->name('universals.show');
     Route::livewire('itps', Library::class)->name('itps.index');
     Route::livewire('about', About::class)->name('about');
@@ -47,7 +56,7 @@ Route::redirect('account', '/you');
 Route::get('media/{key}', MediaController::class)->where('key', '.*')->name('media.show');
 
 Route::middleware('auth')->group(function () {
-    Route::livewire('welcome', CompleteProfile::class)->name('profile');
+    Route::livewire('profile', CompleteProfile::class)->name('profile');
     Route::post('sign-out', SignOutController::class)->name('sign-out');
 
     Route::middleware(EnsureProfileIsComplete::class)->group(function () {

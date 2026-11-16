@@ -1,57 +1,32 @@
 {{--
-    The bar: Today · Return · ITPs · You (docs/design/direction.md "Navigation").
+    The bar: the original app's glass pill (docs/design/direction.md "Navigation"). Your ITPs on
+    the left, the logo raised in the centre for Today, You on the right (a guest's goes to sign-in).
+    No visible labels, as in the original; each link has an aria-label.
 
     Rendered once inside @persist('tabbar') in the layout. Links use data-transition="tab" and
     data-tab-match (one or more path prefixes, space-separated), which transitions.js uses to keep
     aria-current right after each swap (a persisted element never re-renders). An ITP's page belongs
-    to ITPs; About and account deletion to You. Paths, not absolute URLs (see the layout).
+    to Your ITPs; About and account deletion to You. Paths, not absolute URLs (see the layout). The
+    links are in the order they sit on screen, so a tab slides the way it looks.
 
-    Return is not a page: it opens a sheet with the ways back to centre. Its rows will point at the
-    player once that route exists; until then they lead home.
+    The logo's blurred copy is its glow when Today is the current page (bar.css).
 
     Signing in or out is a full page load, so the persisted bar is rebuilt for the new state.
 --}}
 @php
     $youUrl = Auth::check() ? route('you', absolute: false) : route('sign-in', absolute: false);
     $youMatch = Auth::check() ? '/you /about /delete-account' : '/sign-in';
-    $returnUrl = route('home', absolute: false);
+    $youLabel = Auth::check() ? 'You' : 'Sign in';
 @endphp
-<nav class="app-tabbar" aria-label="Main" x-data="{ open: false }" @keydown.escape.window="open = false">
-    <a href="{{ route('home', absolute: false) }}" data-transition="tab" data-tab-match="/ /today">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17h18M6 17a6 6 0 0 1 12 0"/><circle cx="12" cy="11" r="1.2" fill="currentColor"/></svg>
-        Today
+<nav class="app-tabbar" aria-label="Main">
+    <a href="{{ route('itps.index', absolute: false) }}" data-transition="tab" data-tab-match="/itps /universal" class="app-tabbar__side app-tabbar__side--start" aria-label="Your ITPs">
+        <x-icons.list />
     </a>
-    <button type="button" @click="open = !open" :aria-expanded="open ? 'true' : 'false'" aria-controls="return-sheet">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>
-        Return
-    </button>
-    <a href="{{ route('itps.index', absolute: false) }}" data-transition="tab" data-tab-match="/itps /universal">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 20V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v14l-6-3-6 3z"/></svg>
-        ITPs
+    <a href="{{ route('home', absolute: false) }}" data-transition="tab" data-tab-match="/ /today" class="app-tabbar__logo" aria-label="Today">
+        <x-icons.logo class="app-tabbar__glow" />
+        <x-icons.logo class="app-tabbar__mark" />
     </a>
-    <a href="{{ $youUrl }}" data-transition="tab" data-tab-match="{{ $youMatch }}">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
-        You
+    <a href="{{ $youUrl }}" data-transition="tab" data-tab-match="{{ $youMatch }}" class="app-tabbar__side app-tabbar__side--end" aria-label="{{ $youLabel }}">
+        <x-icons.user />
     </a>
-
-    <template x-teleport="body">
-        <div x-show="open" x-cloak>
-            <div class="return-scrim" @click="open = false"
-                 x-show="open"
-                 x-transition:enter="return-scrim-enter" x-transition:enter-start="return-scrim-enter-start"
-                 x-transition:leave="return-scrim-leave" x-transition:leave-end="return-scrim-leave-end"></div>
-            <div id="return-sheet" class="return-sheet" role="dialog" aria-label="A way back to centre"
-                 x-show="open" x-trap.noscroll="open"
-                 x-transition:enter="return-sheet-enter" x-transition:enter-start="return-sheet-enter-start"
-                 x-transition:leave="return-sheet-leave" x-transition:leave-end="return-sheet-leave-end">
-                <p class="t-kicker">Whenever you need it</p>
-                <h2 class="t-title" style="font-size: 26px">A way back to centre</h2>
-                <div class="rows">
-                    <a class="row" href="{{ $returnUrl }}" data-transition="forward" @click="open = false">Return to Coherence <small>primer · 2 min</small></a>
-                    <a class="row" href="{{ $returnUrl }}" data-transition="forward" @click="open = false">Breathe 11 <small>2 min</small></a>
-                    <a class="row" href="{{ $returnUrl }}" data-transition="forward" @click="open = false">The afternoon’s Why <small>a moment</small></a>
-                </div>
-            </div>
-        </div>
-    </template>
 </nav>

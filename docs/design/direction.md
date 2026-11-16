@@ -17,13 +17,13 @@ Content source of truth: `docs/codex/creative-codex-v6.md`. Real intake fields a
 - **The daily rhythm is the information architecture** (Codex §23). Two anchors and an open middle: morning enters the ITP then asks the one question; midday offers a way back (its Breathe 11, Return to Coherence) and the Quantum Why arrives; evening asks what shifted and hands the Why back. The aligned step is optional, never a tracked stage.
 - **Legibility rule:** atmosphere may be subtle, information may not. No informational text under 16px, body 18px, 48px touch targets, soft text only for truly secondary lines; scale with the phone's text size.
 
-## Navigation (decided 15 Nov 2026)
+## Navigation (decided 15 Nov 2026; the bar revised 17 Nov)
 
-- **A bottom bar of four: Today · Return · ITPs · You.** Replaces the logo-mark menu on the card (too subtle for older audiences once the app had real rooms). "Create a personal ITP" and "search" were proposed for the bar and rejected: making a Personal is a once-in-weeks act and lives on the Personal tab; thirteen Universals don't need search — the three tabs are the search.
-- **Return is not a page.** It slides up a small sheet from anywhere: Return to Coherence · the ITP's Breathe 11 · the afternoon's Why. The thing a dysregulated person must find without thinking.
+- **The bar is the original app's floating glass pill (17 Nov).** The logo raised in the centre is Today (with a soft glow when it is the current page), the list icon on the left is Your ITPs, the person on the right is You (sign-in for a guest). No visible labels, as in the original; each has an accessible name. It replaced the four-tab bar of 15 Nov. "Create a personal ITP" and "search" were proposed for the bar and rejected: making a Personal is a once-in-weeks act and lives on the Personal tab; thirteen Universals don't need search — the three tabs are the search.
+- **No Return button (removed 17 Nov).** The way back to centre is on Today's afternoon card (the ITP's Breathe 11, Return to Coherence) and in the day's Why.
 - **You** holds: your record, what you're living with, the day's three reminders (morning · a Quantum Why · evening, each with a time and a switch), still mode, text size, about, account. **No feedback form and no "pool"** (removed 15 Nov).
 - The bar hides inside the player, Breathe 11, the Why, the making and the beginning — places you are *in*, not places you navigate from.
-- **The bar must read at every hour** (fixed 15 Nov after the icons vanished at dawn/dusk): glass over the field with dark ink in the warm hours and by day, pale ink on dark glass at night, white with a rule in white rooms. No filled icons; labels always.
+- **The bar must read at every hour** (fixed 15 Nov after the icons vanished at dawn/dusk): glass over the field with dark ink in the warm hours and by day, pale ink on dark glass at night, white with a rule in white rooms. Line icons, and the logo in the bar's ink.
 
 ## Materials (decided 10 Nov 2026)
 
@@ -42,14 +42,15 @@ Content source of truth: `docs/codex/creative-codex-v6.md`. Real intake fields a
 - **Rhythm is tracked but not aggressive**: three reminders, user-set, one tap to silence; the Quantum Why is content, not a nag. State is known but never nags.
 - **Stacking in the player**: a session may be a sequence of pieces with light handing over between them ("Continue · Breathe 11" after the seal).
 - **A beginning path** for new users: Enter the field → Meet Your ITP Self (a few days) → Choose one to live with (the four open Universals) → make your own. Shown only while new.
+- **Nothing is lived with until chosen (17 Nov).** Until then Today's card is *Choose your ITP*, for guests too. A guest's choice is kept on the device and becomes theirs at sign-in if they have none.
 - **Pacer variants** for Breathe 11: *light* (preferred), *petals* (optional later), plain circle.
 - Player gifts from the Codex: "Beloved One" opening; the closing seal gets a soft full-screen bloom on each line.
 
 ## The library and an ITP's page (sketched 10–14 Nov)
 
-- **Your ITPs: a white room with three tabs — Universal (13) · Personal · Primers.** One-line note under each tab. Rows: thumbnail (optional) · short name · full title · duration. Guest view: Personal tab invites sign-in; non-preview Universals show a lock but stay visible and tappable.
-- **An ITP's page** (the `universal/{slug}` route; same template for a Personal), on white: back · small emblem (optional) · short name · full title · the "Feeling…?" description with its question in italic · **Enter** · "Live with this one instead" (or "You're living with this one") · Breathe 11 and A Quantum Why as rows · three folds: *The words*, *The eleven*, *Quantum Whys*. For a guest on a locked Universal, Enter becomes "Sign in to listen".
-- **The words are readable before listening**, including on locked Universals; the lines and Whys too. Open to reversal.
+- **Your ITPs: a white room with three tabs — Universal (13) · Personal · Primers.** One-line note under each tab. Rows: thumbnail (optional) · short name only (a Personal: its title; 17 Nov) · duration, or *your ITP* on the one lived with. Guest view: Personal tab invites sign-in; non-preview Universals show a lock but stay visible and tappable.
+- **An ITP's page** (the `universal/{slug}` route; same template for a Personal), on white (simplified 17 Nov, as in the original): back · small emblem (optional) · short name (a Personal: its title, in italic) · the "Feeling…?" description with its question in italic · **Make this my ITP** (or *This is your ITP.*) · three play buttons **ITP · Breathe 11 · Quantum Why**, each opening the player without touching the day; one that can't play yet is disabled with the reason (*downloading…*, *waiting for a connection*, *no voice yet*). Guests can choose and play the open (preview) Universals. For a guest on a locked Universal, one **Sign in to play** instead.
+- **No word folds on the page (17 Nov).** The words, the eleven lines and the Whys are in the player.
 - **No large hero image on the page** (decided 11 Nov). Images survive only as thumbnails/emblems; whether they mean anything is still open.
 
 ## Making a Personal ITP (sketched 10 Nov; approved)

@@ -21,15 +21,48 @@ it('sends a user without a first name to the profile screen on every visit', fun
         ->assertRedirect(route('profile'));
 })->with(['home', 'you', 'itps.index', 'itps.create']);
 
-it('greets the user at home, with the tab bar', function () {
+it('greets the user at home, with the bar', function () {
     $this->travelTo('2026-11-16 09:00:00');
 
     $this->actingAs(User::factory()->create(['first_name' => 'Ann']))
         ->get(route('home'))
         ->assertOk()
         ->assertSeeLivewire(Home::class)
-        ->assertSee('Living with')
-        ->assertSee('data-transition="tab"', escape: false);
+        ->assertSee('Choose your ITP')
+        ->assertSee('<nav class="app-tabbar" aria-label="Main">', escape: false);
+});
+
+it('draws the menu as three links by path: Your ITPs, the logo for Today, and You', function () {
+    $this->actingAs(User::factory()->create())
+        ->get(route('itps.index'))
+        ->assertOk()
+        ->assertSeeInOrder([
+            '<nav class="app-tabbar" aria-label="Main">',
+            '<a href="/itps" data-transition="tab" data-tab-match="/itps /universal" class="app-tabbar__side app-tabbar__side--start" aria-label="Your ITPs">',
+            '<a href="/" data-transition="tab" data-tab-match="/ /today" class="app-tabbar__logo" aria-label="Today">',
+            'class="app-tabbar__glow"',
+            'class="app-tabbar__mark"',
+            '<a href="/you" data-transition="tab" data-tab-match="/you /about /delete-account" class="app-tabbar__side app-tabbar__side--end" aria-label="You">',
+            '</nav>',
+        ], escape: false)
+        ->assertDontSee('Return')
+        ->assertDontSee('return-sheet', escape: false)
+        ->assertDontSee('href="'.url('/'), escape: false);
+});
+
+it('sends a guest\'s person icon to sign-in', function () {
+    $this->get(route('itps.index'))
+        ->assertOk()
+        ->assertSee('<a href="/sign-in" data-transition="tab" data-tab-match="/sign-in" class="app-tabbar__side app-tabbar__side--end" aria-label="Sign in">', escape: false);
+});
+
+it('leaves the menu\'s current page to transitions.js, and hides it where the page says so', function () {
+    $js = file_get_contents(resource_path('js/transitions.js'));
+    $css = file_get_contents(resource_path('css/bar.css'));
+
+    expect($js)->toContain("t.setAttribute('aria-current', 'page')")
+        ->and($css)->toContain(':root[data-bar="hidden"] .app-tabbar {')
+        ->toContain('.app-tabbar__logo[aria-current="page"] .app-tabbar__glow {');
 });
 
 /*
@@ -40,11 +73,10 @@ it('links between screens by path, never by absolute URL', function () {
     $user = User::factory()->create();
     $itp = Itp::factory()->for($user)->create();
     $universal = UniversalItp::factory()->preview()->create();
-    UniversalItp::factory()->base()->create(['slug' => 'meet-your-itp-self']);
 
     $this->get(route('home'))
         ->assertSee('href="/sign-in" data-transition="forward"', escape: false)
-        ->assertSee('href="/universal/meet-your-itp-self" data-transition="forward"', escape: false)
+        ->assertSee('href="/itps" data-transition="forward"', escape: false)
         ->assertDontSee('href="'.url('/'), escape: false);
 
     $this->actingAs($user);
@@ -53,13 +85,12 @@ it('links between screens by path, never by absolute URL', function () {
         ->assertSee('href="/" data-transition="tab"', escape: false)
         ->assertSee('href="/itps" data-transition="tab"', escape: false)
         ->assertSee('href="/you" data-transition="tab"', escape: false)
-        ->assertSee('href="/universal/meet-your-itp-self" data-transition="forward"', escape: false)
+        ->assertSee('href="/itps" data-transition="forward"', escape: false)
         ->assertDontSee('href="'.url('/'), escape: false);
 
     $this->get(route('you'))
         ->assertSee('action="/sign-out"', escape: false)
         ->assertSee('href="/itps" data-transition="forward"', escape: false)
-        ->assertSee('href="/universal/meet-your-itp-self" data-transition="forward"', escape: false)
         ->assertSee('href="/about" data-transition="forward"', escape: false)
         ->assertSee('href="/delete-account" data-transition="forward"', escape: false)
         ->assertDontSee('href="'.url('/'), escape: false);

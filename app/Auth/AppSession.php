@@ -4,6 +4,7 @@ namespace App\Auth;
 
 use App\Api\AuthClient;
 use App\Api\SignIn;
+use App\Support\GuestChoice;
 use App\Support\Runtime;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
@@ -21,6 +22,7 @@ use LogicException;
  * then sign into their own session against that row and keep the token for later API calls.
  * The phone also keeps the user's id in the keychain, so it stays signed in until sign-out. A
  * browser the user said is theirs keeps its sign-in in a cookie, for 90 days (TrustedBrowser).
+ * An ITP chosen as a guest on this device becomes the user's, if they live with none yet.
  */
 class AppSession
 {
@@ -57,6 +59,8 @@ class AppSession
 
         Auth::login($user);
         session()->regenerate();
+
+        GuestChoice::carryInto($user);
 
         $this->tokens->put($signIn->token);
 

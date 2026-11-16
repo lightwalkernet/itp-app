@@ -11,6 +11,7 @@ use App\Media\MediaDownloads;
 use App\Support\AppDay;
 use App\Support\DayEntries;
 use App\Support\LivingWith;
+use App\Support\PlayLink;
 use App\Support\Runtime;
 use App\Sync\GuestContentPull;
 use App\Sync\SyncNow;
@@ -32,7 +33,9 @@ use Livewire\Component;
  * Today (brief 1 §3): the threshold a person comes back to all day, and the app's start URL, so
  * guests land here too. A light room: what they are living with, the arc
  * of the day, and exactly one card, which follows the device's hour and what they've kept today.
- * Under it, a way back into a generation still running or waiting on them.
+ * Until they have chosen an ITP (a guest too), the card asks them to choose one. Enter opens the
+ * player with `from=today`, and the player marks the day entered. Under the card, a way back into
+ * a generation still running or waiting on them.
  *
  * Rows are local on the phone and the shared database on the web. Syncing (or, signed out, the
  * public content pull) and asking the API happen after the page shows (`wire:init`); when the API
@@ -101,24 +104,6 @@ class Home extends Component
     }
 
     /**
-     * Enter what they're living with: its page, for now. Visiting it from here counts as entering
-     * today, which moves the morning card on to its question.
-     */
-    public function enter(): void
-    {
-        $itp = LivingWith::for(Auth::user());
-
-        if ($itp === null) {
-            return;
-        }
-
-        // brief 2: replace the flag with the player's play record, and go to the player.
-        session()->put($this->enteredKey(), true);
-
-        $this->dispatch('today-navigate', url: $this->pageOf($itp), direction: 'forward');
-    }
-
-    /**
      * "Not tonight — that's allowed": an evening kept with no words, so the day can close.
      */
     public function notTonight(): void
@@ -140,8 +125,12 @@ class Home extends Component
 
         return view('livewire.home', [
             'user' => $user,
-            'itpName' => $itp === null ? 'Meet Your ITP Self' : $this->nameOf($itp),
+            'itpName' => $itp === null ? null : $this->nameOf($itp),
             'itpUrl' => $itp === null ? null : $this->pageOf($itp),
+            'play' => $itp === null ? null : [
+                'enter' => PlayLink::for($itp, 'itp', 'today'),
+                'breathe' => PlayLink::for($itp, 'breathe'),
+            ],
             'card' => $this->card($user, $itp, $entries),
             'arc' => $this->arc($entries),
             'returnUrl' => $this->returnToCoherenceUrl(),
@@ -152,14 +141,20 @@ class Home extends Component
     }
 
     /**
-     * The one card (brief 1 §3's table), as the view draws it.
+     * The one card (brief 1 §3's table), as the view draws it. Choose your ITP until one is chosen.
      *
      * @param  Collection<string, Entry>  $entries
      * @return array{state: string, kicker: string, title: string, quote: bool, line: string}
      */
     protected function card(?User $user, UniversalItp|Itp|null $itp, Collection $entries): array
     {
-        $name = $itp === null ? 'Meet Your ITP Self' : $this->nameOf($itp);
+        if ($itp === null) {
+            return $this->state('choose', 'To begin', 'Choose your ITP', $user === null
+                ? 'Four are open before you sign in.'
+                : 'Pick one to live with. You can change it any time.');
+        }
+
+        $name = $this->nameOf($itp);
         $quoted = fn (?Entry $entry): string => '“'.$entry?->body.'”';
 
         if ($user === null) {
@@ -170,7 +165,7 @@ class Home extends Component
         $morning = $entries->get(EntryKind::Morning->value);
         $evening = $entries->get(EntryKind::Evening->value);
         $evidence = $entries->get(EntryKind::Evidence->value);
-        $why = AppDay::why($itp?->quantum_whys, $this->date);
+        $why = AppDay::why($itp->quantum_whys, $this->date);
 
         if ($part === 'morning') {
             if ($morning !== null) {
@@ -251,6 +246,9 @@ class Home extends Component
         return $hour * 60 + $minute;
     }
 
+    /**
+     * Set by the player when Today's Enter starts playing.
+     */
     protected function enteredKey(): string
     {
         return 'entered:'.$this->date;

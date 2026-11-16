@@ -20,18 +20,14 @@
                     <div class="library-list">
                         @foreach ($itps as $itp)
                             @php($thumbUrl = $media->url($itp->image_path))
-                            @php($meta = 'Made from your words · '.$itp->created_at->format('j F').($livingWith?->is($itp) ? ' · living with' : ''))
                             <a href="{{ route('itps.show', $itp, absolute: false) }}" data-transition="forward" class="lrow" wire:key="itp-{{ $itp->id }}">
                                 @if ($thumbUrl !== null)
                                     <img src="{{ $thumbUrl }}" alt="" class="lrow__thumb" loading="lazy">
                                 @else
                                     <span class="lrow__thumb"></span>
                                 @endif
-                                <span>
-                                    <span class="lrow__name">{{ $itp->title }}</span>
-                                    <span class="lrow__meta">{{ $meta }}</span>
-                                </span>
-                                <span class="lrow__side">3 min</span>
+                                <span class="lrow__name">{{ $itp->title }}</span>
+                                <span class="lrow__side">{{ $livingWith?->is($itp) ? 'your ITP' : '3 min' }}</span>
                             </a>
                         @endforeach
                     </div>
@@ -47,12 +43,12 @@
                     @foreach ($primerRows as $primer)
                         @if ($primer['itp'] !== null)
                             <a href="{{ route('universals.show', $primer['itp'], absolute: false) }}" data-transition="forward" class="lrow lrow--plain" wire:key="primer-{{ $loop->index }}">
-                                <span><span class="lrow__name">{{ $primer['name'] }}</span><span class="lrow__meta">{{ $primer['meta'] }}</span></span>
+                                <span><span class="lrow__name">{{ $primer['name'] }}</span>@if ($primer['meta'] !== null)<span class="lrow__meta">{{ $primer['meta'] }}</span>@endif</span>
                                 <span class="lrow__side"></span>
                             </a>
                         @else
                             <div class="lrow lrow--plain" aria-disabled="true" wire:key="primer-{{ $loop->index }}">
-                                <span><span class="lrow__name">{{ $primer['name'] }}</span><span class="lrow__meta">{{ $primer['meta'] }}</span></span>
+                                <span><span class="lrow__name">{{ $primer['name'] }}</span>@if ($primer['meta'] !== null)<span class="lrow__meta">{{ $primer['meta'] }}</span>@endif</span>
                                 <span class="lrow__side"></span>
                             </div>
                         @endif
@@ -73,11 +69,8 @@
                             @else
                                 <span class="lrow__thumb"></span>
                             @endif
-                            <span>
-                                <span class="lrow__name">{{ $universal->display_name }}</span>
-                                <span class="lrow__meta">{{ $universal->title }}</span>
-                            </span>
-                            <span class="lrow__side">{{ $isLocked ? 'sign in' : '3 min' }}</span>
+                            <span class="lrow__name">{{ $universal->display_name }}</span>
+                            <span class="lrow__side">{{ match (true) { $isLocked => 'sign in', (bool) $livingWith?->is($universal) => 'your ITP', default => '3 min' } }}</span>
                         </a>
                     @endforeach
                 </div>

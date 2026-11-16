@@ -45,18 +45,18 @@ it('shows who is signed in, what they live with, and the day’s reminders', fun
         ], escape: false);
 });
 
-it('leads to Meet Your ITP Self until another is chosen, or says it is coming soon', function () {
+it('leads to Your ITPs to choose one until one is chosen, then to the one chosen', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)->get(route('you'))
-        ->assertSee('<button type="button" class="row" aria-disabled="true">Living with', escape: false)
-        ->assertSee('coming soon');
+        ->assertSeeInOrder(['href="/itps" data-transition="forward" class="row">Living with', '<small>none yet · choose</small>'], escape: false);
 
-    $meetYourItpSelf = UniversalItp::factory()->base()->create(['slug' => 'meet-your-itp-self', 'short_name' => 'Meet Your ITP Self']);
+    $chosen = UniversalItp::factory()->create(['slug' => 'awaken-wonder', 'short_name' => 'Awaken Wonder']);
+    UserSetting::factory()->for($user)->livingWith($chosen)->create();
 
-    $this->actingAs($user)->get(route('you'))
-        ->assertSee('href="/universal/'.$meetYourItpSelf->slug.'" data-transition="forward" class="row">Living with', escape: false)
-        ->assertSee('Meet Your ITP Self · change');
+    $this->actingAs($user->fresh())->get(route('you'))
+        ->assertSee('href="/universal/awaken-wonder" data-transition="forward" class="row">Living with', escape: false)
+        ->assertSee('Awaken Wonder · change');
 });
 
 it('turns a reminder off and on, on the user’s settings', function () {

@@ -14,9 +14,10 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 
 /**
- * A personal ITP's page (brief 1 §5), in the same template as a universal one: the attunement,
- * its Breathe 11 and its Quantum Whys, and its audio where the device has it. A local row on the
- * phone, the shared database on the web. Only its owner sees it; anyone else gets a 404.
+ * A personal ITP's page (player contract item 4), in the same template as a universal one: its
+ * title, Make this my ITP, and its pieces into the player (no voice yet: only its Quantum Whys
+ * play). A local row on the phone, the shared database on the web. Only its owner sees it;
+ * anyone else gets a 404.
  */
 #[Layout('layouts.app')]
 #[Title('Your ITP')]
@@ -41,11 +42,6 @@ class ShowItp extends Component
     protected function shownItp(): UniversalItp|Itp
     {
         return $this->itp;
-    }
-
-    protected function canBeLivedWith(): bool
-    {
-        return true;
     }
 
     protected function isLockedForGuest(): bool

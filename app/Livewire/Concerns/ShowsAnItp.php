@@ -5,16 +5,19 @@ namespace App\Livewire\Concerns;
 use App\Media\MediaDownloads;
 use App\Media\MediaDownloadStatus;
 use App\Media\MediaLibrary;
+use App\Support\GuestChoice;
 use App\Support\LivingWith;
+use App\Support\PlayLink;
 use App\Support\Runtime;
 use Illuminate\Support\Facades\Auth;
 use Itp\Core\Models\Itp;
 use Itp\Core\Models\UniversalItp;
 
 /**
- * What an ITP's page shows (brief 1 §5), for a universal ITP and a user's own alike: the words,
- * the eleven lines and the Whys, where its audio stands on this device, and whether it can be
- * chosen to live with. Rendered by `<x-itp-page>`.
+ * What an ITP's page shows (player contract item 4), for a universal ITP and a user's own alike:
+ * whether it can be made the person's ITP, and its three pieces (the ITP, its Breathe 11, a
+ * Quantum Why), each a link into the player or disabled with the reason. The words themselves are
+ * in the player. Rendered by `<x-itp-page>`.
  */
 trait ShowsAnItp
 {
@@ -24,23 +27,29 @@ trait ShowsAnItp
     abstract protected function shownItp(): UniversalItp|Itp;
 
     /**
-     * Whether a person can choose this one to live with at all.
-     */
-    abstract protected function canBeLivedWith(): bool;
-
-    /**
-     * Whether a guest must sign in before they can listen.
+     * Whether a guest must sign in before they can play.
      */
     abstract protected function isLockedForGuest(): bool;
 
     /**
-     * Live with this one from now on. Never for a guest, nor for a piece that isn't lived with.
+     * Make this the person's ITP until they change it. A guest may choose an open (preview) one,
+     * kept on this device until they sign in.
      */
-    public function liveWithThis(): void
+    public function makeThisMyItp(): void
     {
-        abort_unless(Auth::check() && $this->canBeLivedWith(), 403);
+        $itp = $this->shownItp();
 
-        LivingWith::choose(Auth::user(), $this->shownItp());
+        abort_unless(LivingWith::canBeLivedWith($itp), 403);
+
+        if (Auth::check()) {
+            LivingWith::choose(Auth::user(), $itp);
+
+            return;
+        }
+
+        abort_unless($itp instanceof UniversalItp && GuestChoice::isOpenTo($itp), 403);
+
+        GuestChoice::choose($itp);
     }
 
     /**
@@ -54,45 +63,76 @@ trait ShowsAnItp
         return [
             'itp' => $itp,
             'imageUrl' => $media->url($itp->image_path),
-            'paragraphs' => array_values(array_filter(
-                array_map('trim', preg_split('/\R{2,}/', (string) $itp->attunement_text)),
-                fn (string $paragraph): bool => $paragraph !== '',
-            )),
-            'breathLines' => collect($itp->breath11_lines ?? [])->sortBy('order')->pluck('text')->values()->all(),
-            'quantumWhys' => array_values($itp->quantum_whys ?? []),
-            'enter' => $this->audio($itp->attunement_audio_path, $locked, $media, $downloads),
-            'breathAudio' => $this->audio($itp->breath11_audio_path, $locked, $media, $downloads),
-            'livingWith' => match (true) {
-                Auth::guest(), ! $this->canBeLivedWith() => null,
-                LivingWith::is(Auth::user(), $itp) => 'living',
-                default => 'offer',
-            },
+            'choice' => $locked ? null : $this->choice($itp),
+            'pieces' => $locked ? [] : $this->pieces($itp, $media, $downloads),
             'lockedForGuest' => $locked,
         ];
     }
 
     /**
-     * One audio and where it stands: `available` (with its URL), `downloading` (signed in on the
-     * phone, not fetched yet), `waiting` (the last download failed; retried from Today) or
-     * `locked` (a guest, who downloads nothing and plays only the previews).
+     * `offer` (Make this my ITP), `chosen` (This is your ITP.) or null where it can't be chosen:
+     * a primer or the Introduction, or a Universal a guest can't choose before sign-in.
      *
-     * @return array{status: 'available'|'downloading'|'waiting'|'locked', url: string|null}|null
+     * @return 'offer'|'chosen'|null
      */
-    protected function audio(?string $key, bool $locked, MediaLibrary $media, MediaDownloads $downloads): ?array
+    protected function choice(UniversalItp|Itp $itp): ?string
     {
-        if ($key === null) {
-            return null;
+        $canChoose = Auth::check()
+            ? LivingWith::canBeLivedWith($itp)
+            : $itp instanceof UniversalItp && GuestChoice::isOpenTo($itp);
+
+        return match (true) {
+            ! $canChoose => null,
+            LivingWith::is(Auth::user(), $itp) => 'chosen',
+            default => 'offer',
+        };
+    }
+
+    /**
+     * The pieces the ITP has, in order. A piece it has nothing of is left out (a primer or the
+     * Introduction has no Breathe 11 or Whys). A piece with `url` null is shown disabled, `meta`
+     * saying why.
+     *
+     * @return list<array{piece: 'itp'|'breathe'|'why', label: string, url: string|null, meta: string}>
+     */
+    protected function pieces(UniversalItp|Itp $itp, MediaLibrary $media, MediaDownloads $downloads): array
+    {
+        $pieces = [$this->voiced($itp, 'itp', LivingWith::canBeLivedWith($itp) ? 'ITP' : 'Play', '3 min', $itp->attunement_audio_path, $itp->attunement_timings, $media, $downloads)];
+
+        if (filled($itp->breath11_lines) || filled($itp->breath11_timings) || $itp->breath11_audio_path !== null) {
+            $pieces[] = $this->voiced($itp, 'breathe', 'Breathe 11', '2 min', $itp->breath11_audio_path, $itp->breath11_timings, $media, $downloads);
         }
 
-        $url = $locked ? null : $media->url($key);
+        if (filled($itp->quantum_whys)) {
+            $pieces[] = ['piece' => 'why', 'label' => 'Quantum Why', 'url' => PlayLink::for($itp, 'why'), 'meta' => 'a moment'];
+        }
 
-        $status = match (true) {
-            $url !== null => 'available',
-            Auth::guest() => 'locked',
-            Runtime::isMobile() && $downloads->status($key) === MediaDownloadStatus::Failed => 'waiting',
-            default => 'downloading',
+        return $pieces;
+    }
+
+    /**
+     * A piece played to its voice: it needs its audio on this device and the timings that keep
+     * the words or the breath in step with it.
+     *
+     * @param  'itp'|'breathe'  $piece
+     * @param  array<int, mixed>|null  $timings
+     * @return array{piece: 'itp'|'breathe', label: string, url: string|null, meta: string}
+     */
+    protected function voiced(UniversalItp|Itp $itp, string $piece, string $label, string $length, ?string $key, ?array $timings, MediaLibrary $media, MediaDownloads $downloads): array
+    {
+        $reason = match (true) {
+            $key === null, blank($timings) => 'no voice yet',
+            $media->url($key) !== null => null,
+            Auth::guest() => 'after sign-in',
+            Runtime::isMobile() && $downloads->status($key) === MediaDownloadStatus::Failed => 'waiting for a connection',
+            default => 'downloading…',
         };
 
-        return ['status' => $status, 'url' => $url];
+        return [
+            'piece' => $piece,
+            'label' => $label,
+            'url' => $reason === null ? PlayLink::for($itp, $piece) : null,
+            'meta' => $reason ?? $length,
+        ];
     }
 }
