@@ -6,6 +6,7 @@ use App\Auth\TokenStore;
 use App\Livewire\CompleteProfile;
 use App\Livewire\SignIn;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Itp\Core\Enums\LivingWithType;
@@ -152,6 +153,30 @@ it('signs in without settings from a server that doesn\'t send them', function (
         ->assertRedirect(route('home'));
 
     expect(UserSetting::count())->toBe(0);
+});
+
+it('makes the ITP chosen as a guest on the phone the user\'s own at sign-in', function () {
+    $id = strtolower((string) Str::ulid());
+    $itp = UniversalItp::factory()->preview()->create(['slug' => 'healing']);
+    DB::table('device_settings')->insert(['key' => 'guest_itp', 'value' => 'healing']);
+    Http::fake(['api.itp.test/v1/auth/verify-code' => mobileSignInResponse(['id' => $id, 'email' => 'ann@example.com', 'first_name' => 'Ann'], settings: [
+        'id' => strtolower((string) Str::ulid()),
+        'user_id' => $id,
+        'living_with_type' => null,
+        'living_with_id' => null,
+    ])]);
+
+    Livewire::test(SignIn::class)
+        ->set('email', 'ann@example.com')
+        ->set('code', '123456')
+        ->call('verifyCode')
+        ->assertRedirect(route('home'));
+
+    expect(UserSetting::sole())
+        ->living_with_type->toBe(LivingWithType::Universal)
+        ->living_with_id->toBe($itp->id)
+        ->sync_dirty->toBeTrue();
+    $this->assertDatabaseMissing('device_settings', ['key' => 'guest_itp']);
 });
 
 it('updates the phone\'s copy when the same user signs in again', function () {

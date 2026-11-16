@@ -2,6 +2,7 @@
 
 use App\Auth\TokenStore;
 use App\Livewire\Home;
+use App\Support\GuestChoice;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\DB;
@@ -76,21 +77,28 @@ it('asks the user to enter first in the morning', function () {
     todayAt($user, 7)
         ->assertSeeHtml('data-card="morning-enter"')
         ->assertSeeHtmlInOrder(['Living with', 'The Quiet Yes', 'This morning', 'The Quiet Yes', 'Enter it first. Three minutes with the light, then one question.', 'Enter', 'Something else today?', 'Your ITPs'])
-        ->assertSeeHtml('href="/universal/the-quiet-yes" data-transition="forward"')
+        ->assertSeeHtml('<a class="living__name" href="/universal/the-quiet-yes" data-transition="forward">The Quiet Yes</a>')
+        ->assertSeeHtml('<a href="/play/universal/the-quiet-yes/itp?from=today" data-transition="forward" class="btn">Enter')
         ->assertSeeHtml('href="/itps" data-transition="forward"');
 });
 
-it('counts entering from Today as entering, then asks the morning question', function () {
+it('leaves marking the day entered to the player: Enter is a link, and showing Today marks nothing', function () {
     $user = userLivingWithQuietYes();
 
-    $today = todayAt($user, 7)->call('enter');
+    todayAt($user, 7)->assertDontSeeHtml('wire:click="enter"');
 
-    $today->assertDispatched('today-navigate', url: '/universal/the-quiet-yes', direction: 'forward')
-        ->call('setClock', 10, '2026-11-16', 0)
+    expect(session()->has('entered:2026-11-16'))->toBeFalse();
+});
+
+it('asks the morning question once the player has marked the day entered', function () {
+    $user = userLivingWithQuietYes();
+    session()->put('entered:2026-11-16', true);
+
+    todayAt($user, 10)
         ->assertSeeHtml('data-card="morning-ask"')
         ->assertSeeHtmlInOrder(['In its afterglow', 'What does my ITP Self want today?', 'Speak it or write it. A sentence is enough.', 'Begin', 'Or sit a moment longer', 'Breathe 11'])
-        ->assertSeeHtml('href="/today/morning" data-transition="forward"');
-    expect(session('entered:2026-11-16'))->toBeTrue();
+        ->assertSeeHtml('href="/today/morning" data-transition="forward"')
+        ->assertSeeHtml('href="/play/universal/the-quiet-yes/breathe" data-transition="forward"');
 });
 
 it('quotes the morning entry once it is kept, and fills the morning point', function () {
@@ -100,6 +108,7 @@ it('quotes the morning entry once it is kept, and fills the morning point', func
     todayAt($user, 10)
         ->assertSeeHtml('data-card="morning-kept"')
         ->assertSeeHtmlInOrder(['This morning', '“To move slowly today.”', 'Carry it lightly. The day will meet you.', 'Breathe 11 · 2 min', 'Add one aligned step, if you wish'])
+        ->assertSeeHtml('<a href="/play/universal/the-quiet-yes/breathe" data-transition="forward" class="btn">Breathe 11 · 2 min')
         ->assertSeeHtml('href="/today/step" data-transition="forward"')
         ->assertSeeHtml('class="arc__pt arc__pt--done" data-point="morning"')
         ->assertSeeHtml('class="arc__pt" data-point="evening"');
@@ -111,6 +120,7 @@ it('offers the way back to centre in the afternoon, before the day’s Why arriv
     todayAt($user, 15)
         ->assertSeeHtml('data-card="afternoon-return"')
         ->assertSeeHtmlInOrder(['Whenever you need it', 'Return to alignment', 'The day pulls. Here is the way back to centre.', 'Breathe 11', 'The Quiet Yes · 2 min', 'Return to Coherence', 'coming soon', 'Add one aligned step, if you wish'])
+        ->assertSeeHtml('href="/play/universal/the-quiet-yes/breathe" data-transition="forward" class="row"')
         ->assertDontSee('Why is the step so warm');
 });
 
@@ -155,6 +165,7 @@ it('asks for the evidence once the evening is kept', function () {
     todayAt($user, 19)
         ->assertSeeHtml('data-card="evening-evidence"')
         ->assertSeeHtmlInOrder(['Celebrate the evidence', 'What are you proud of today?', 'Glimmers, synchronicities, courage. It all counts.', 'Add to the record', 'Or enter', 'The Quiet Yes', '3 min'])
+        ->assertSeeHtml('<a class="btn-sec" href="/play/universal/the-quiet-yes/itp?from=today" data-transition="forward">Or enter')
         ->assertSeeHtml('href="/today/evidence" data-transition="forward"')
         ->assertSeeHtml('class="arc__pt arc__pt--done" data-point="evening"');
 });
@@ -167,6 +178,7 @@ it('closes the day once the evidence is kept', function () {
     todayAt($user, 19)
         ->assertSeeHtml('data-card="complete"')
         ->assertSeeHtmlInOrder(['Today is complete', '“My daughter asked me to walk with her.”', 'Kept in your record.', 'Enter — The Quiet Yes', 'Open', 'your record'])
+        ->assertSeeHtml('href="/play/universal/the-quiet-yes/itp?from=today" data-transition="forward" class="btn">Enter — The Quiet Yes')
         ->assertSeeHtml('href="/you" data-transition="forward"');
 });
 
@@ -239,41 +251,50 @@ it('ignores a clock no device could have', function (mixed $hour, mixed $date) {
     'days away' => [19, '2026-11-20'],
 ]);
 
-it('lives with Meet Your ITP Self until the user chooses, and shows guests its card every hour', function (int $hour) {
-    UniversalItp::factory()->base()->create(['slug' => 'meet-your-itp-self', 'short_name' => 'Meet Your ITP Self']);
-
+it('asks a guest to choose an ITP until they have, every hour', function (int $hour) {
     todayAt(null, $hour)
-        ->assertSeeHtml('data-card="guest"')
-        ->assertSeeHtmlInOrder(['Living with', 'Meet Your ITP Self', 'This morning', 'Meet Your ITP Self', 'Four Universals are open before you sign in. Your own ITP comes after.', 'Enter', 'Sign in — ', 'email and a code'])
-        ->assertSeeHtml('href="/universal/meet-your-itp-self" data-transition="forward"')
-        ->assertSeeHtml('href="/sign-in" data-transition="forward"');
+        ->assertSeeHtml('data-card="choose"')
+        ->assertSeeHtmlInOrder(['To begin', 'Choose your ITP', 'Four are open before you sign in.', 'Your ITPs', 'Sign in — ', 'email and a code'])
+        ->assertSeeHtml('<a href="/itps" data-transition="forward" class="btn">Your ITPs')
+        ->assertSeeHtml('href="/sign-in" data-transition="forward"')
+        ->assertDontSee('Living with');
 })->with([7, 15, 22]);
 
-it('shows Meet Your ITP Self as coming soon while it isn’t in the content', function (bool $signedIn) {
-    todayAt($signedIn ? User::factory()->create() : null, 7)
-        ->assertSee('Meet Your ITP Self')
-        ->assertSeeHtml('<span class="living__name">Meet Your ITP Self</span>')
-        ->assertSeeHtmlInOrder(['<button type="button" class="btn" disabled="disabled">Enter', '<small>coming soon</small>'])
-        ->assertDontSeeHtml('wire:click="enter"');
-})->with(['guest' => false, 'signed in' => true]);
+it('asks a signed-in user to choose an ITP until they have, with or without a settings row', function (bool $hasSettings) {
+    $user = User::factory()->create();
 
-it('lives with Meet Your ITP Self when the user has no settings yet', function () {
-    UniversalItp::factory()->base()->create(['slug' => 'meet-your-itp-self', 'short_name' => 'Meet Your ITP Self']);
+    if ($hasSettings) {
+        UserSetting::factory()->for($user)->create();
+    }
 
-    todayAt(User::factory()->create(), 7)
-        ->assertSeeHtml('data-card="morning-enter"')
-        ->assertSeeHtml('<a class="living__name" href="/universal/meet-your-itp-self" data-transition="forward">Meet Your ITP Self</a>');
+    todayAt($user, 7)
+        ->assertSeeHtml('data-card="choose"')
+        ->assertSeeHtmlInOrder(['Choose your ITP', 'Pick one to live with. You can change it any time.', 'Your ITPs'])
+        ->assertSeeHtml('<a href="/itps" data-transition="forward" class="btn">Your ITPs')
+        ->assertDontSee('Sign in — ')
+        ->assertDontSee('Meet Your ITP Self');
+})->with(['no settings yet' => false, 'nothing chosen' => true]);
+
+it('lets a guest who chose an open ITP enter it, still offering sign-in', function () {
+    UniversalItp::factory()->preview()->create(['slug' => 'awaken-wonder', 'short_name' => 'Awaken Wonder']);
+
+    Livewire::withCookie(GuestChoice::COOKIE, 'awaken-wonder')
+        ->test(Home::class)
+        ->call('setClock', 15, '2026-11-16', 0)
+        ->assertSeeHtml('data-card="guest"')
+        ->assertSeeHtmlInOrder(['Living with', 'Awaken Wonder', 'This morning', 'Awaken Wonder', 'Four Universals are open before you sign in. Your own ITP comes after.', 'Enter', 'Sign in — ', 'email and a code'])
+        ->assertSeeHtml('<a href="/play/universal/awaken-wonder/itp?from=today" data-transition="forward" class="btn">Enter')
+        ->assertSeeHtml('href="/sign-in" data-transition="forward"');
 });
 
-it('links a personal ITP the user lives with to its own page', function () {
+it('links a personal ITP the user lives with to its own page, and enters it in the player', function () {
     $user = User::factory()->create();
     $itp = Itp::factory()->for($user)->create(['title' => 'The Quiet Yes']);
     UserSetting::factory()->livingWith($itp)->create();
 
     todayAt($user, 7)
-        ->call('enter')
-        ->assertDispatched('today-navigate', url: '/itps/'.$itp->id, direction: 'forward')
-        ->assertSeeHtml('<a class="living__name" href="/itps/'.$itp->id.'" data-transition="forward">The Quiet Yes</a>');
+        ->assertSeeHtml('<a class="living__name" href="/itps/'.$itp->id.'" data-transition="forward">The Quiet Yes</a>')
+        ->assertSeeHtml('<a href="/play/itp/'.$itp->id.'/itp?from=today" data-transition="forward" class="btn">Enter');
 });
 
 it('offers to continue the newest generation still open, under the day’s card', function (string $status, string $text) {

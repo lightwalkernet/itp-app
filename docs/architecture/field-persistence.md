@@ -11,7 +11,7 @@ Decision (10 Nov 2026): the ITP app is **separate Livewire pages** (`Livewire.na
 5. **Livewire's navigate swap overwrites `<html>`'s attributes** with the incoming document's (transitions.js already deals with this for `data-nav-direction`). So `field.js` re-applies `data-phase` and `data-still`, and `rooms.js` re-applies `data-room`/`data-bar`, on `livewire:navigated` — synchronously, before the next paint, so no transition fires and nothing flashes. (Both scripts listen for that event; they are idempotent.)
 6. **The entrance is two pages and one attribute** (brief 2): the leaving page sets `data-scene="entering"` (the field floods toward white), then navigates; the arriving page's content fades in and sets `data-scene="inside"`. The rays never stop, so the light carries across.
 7. **Audio persists the same way:** `@persist('player')` holds the `<audio>` element and its controls so a stacked session (Primer → Breathe 11 → Attunement) continues across page changes.
-8. **The bar persists too** (`@persist('tabbar')`, `components/bar.blade.php`): four links with `data-transition="tab"` (Today · Return · ITPs · You). Its colours follow `data-phase`/`data-room` through tokens, not component state; transitions.js keeps `aria-current` right. "Return" is not a page — it opens a small Alpine sheet that persists with the bar.
+8. **The bar persists too** (`@persist('tabbar')`, `components/bar.blade.php`): three links with `data-transition="tab"` (Your ITPs · Today, the raised logo · You). Its colours follow `data-phase`/`data-room` through tokens, not component state; transitions.js keeps `aria-current` right, and the logo's glow follows it in CSS.
 
 ## What the design uses, and how it maps to the stack
 
@@ -24,7 +24,7 @@ Everything is **plain CSS, two `<canvas>` elements, and a few hundred lines of v
 | Rays, motes, stars | `field.js`, the rays canvas (blur 1.2px, screen), 30 fps, paused when hidden or in a white room. Stars breathe per-star; one in nine sparkles. |
 | Time-of-day palette | `data-phase` on `<html>`, set by `field.js` every minute from the device clock; tokens transition 2.4 s. The design page can lock it (`window.itpField.setPhase`). |
 | Page fade (one page to the next) | **Mobile:** the push slide from the `itpinterface` spike (`transitions.js`/`transitions.css`, view transitions), unchanged. **Web:** a class toggled on `livewire:navigating`/`navigated` that fades `.app-page` (brief 1, §7). Pages are see-through to the field, so a slide or fade shows the light beneath. |
-| Card states, the Return sheet, folds | Livewire state for anything the server knows; Alpine `x-show` + `x-transition` for the sheet; native `<details>` for folds. CSS transitions on transform/opacity only. |
+| Card states, folds | Livewire state for anything the server knows; native `<details>` for folds. CSS transitions on transform/opacity only. |
 | Word reveal | `player.js` (brief 2): words split into spans on mount; each frame compare `audio.currentTime` to the ITP's `attunement_timings` and toggle classes; CSS keyframes do the light — the player page is not persisted, so keyframes are fine there. |
 | Breathe 11 pacer | CSS animation on the page (10 s cycle) plus a JS tick for the line changes; Anime.js for the petals variant later. |
 | White rooms | `data-room="white"` on `<html>`: the field fades to 0, the canvases stop drawing, the page surface and the bar go white. |

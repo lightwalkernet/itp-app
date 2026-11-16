@@ -1,6 +1,7 @@
 <?php
 
 use App\Content\ContentBundle;
+use App\Support\Welcome;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Itp\Core\Enums\UniversalItpKind;
@@ -20,6 +21,7 @@ beforeEach(function () {
 
 it('writes the bundled rows to the phone on the first request, without moving the sync cursors', function () {
     useContentBundle(contentSnapshot());
+    Welcome::markSeen();
 
     $this->get(route('home'))->assertOk();
 

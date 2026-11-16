@@ -5,5 +5,5 @@ test('the application opens at home for guests, NativePHP\'s start URL', functio
 
     $response = $this->get('/');
 
-    $response->assertOk()->assertSee('Four Universals are open before you sign in.');
+    $response->assertOk()->assertSee('Four are open before you sign in.');
 });

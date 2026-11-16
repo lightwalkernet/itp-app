@@ -1,6 +1,7 @@
 <?php
 
 use App\Livewire\Library;
+use App\Support\GuestChoice;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -15,7 +16,7 @@ beforeEach(function () {
     Http::preventStrayRequests();
 });
 
-it('lists the universal ITPs in their order, counting each tab from the data', function () {
+it('lists the universal ITPs in their order by short name only, counting each tab from the data', function () {
     UniversalItp::factory()->create(['short_name' => 'Purpose', 'title' => 'Uncover Your Purpose', 'sort_order' => 2]);
     UniversalItp::factory()->create(['short_name' => 'Awaken Wonder', 'title' => 'Light Up Your Life', 'sort_order' => 1, 'image_path' => 'media/images/universals/original/1-awaken-wonder.webp']);
     UniversalItp::factory()->base()->create(['short_name' => 'Introduction']);
@@ -37,10 +38,12 @@ it('lists the universal ITPs in their order, counting each tab from the data', f
             'Two, for everyone. Live with one for a while, or just listen to one today — that doesn’t change what you’re living with.',
             '<img src="'.asset('media/images/universals/original/1-awaken-wonder.webp').'" alt="" class="lrow__thumb"',
             '<span class="lrow__name">Awaken Wonder</span>',
-            '<span class="lrow__meta">Light Up Your Life</span>',
             '<span class="lrow__side">3 min</span>',
             'Purpose',
         ], escape: false)
+        ->assertDontSee('Light Up Your Life')
+        ->assertDontSee('Uncover Your Purpose')
+        ->assertDontSee('lrow__meta', escape: false)
         ->assertDontSee('Introduction');
 });
 
@@ -75,7 +78,7 @@ it('invites a guest to sign in on the Personal tab', function () {
         ->assertDontSee('Make a new personal ITP');
 });
 
-it('lists the user\'s own ITPs, newest first, marking the one they live with', function () {
+it('lists the user\'s own ITPs by title, newest first, marking the one they live with', function () {
     $user = User::factory()->create();
     $older = Itp::factory()->for($user)->create(['title' => 'The studio is open', 'created_at' => '2026-11-02 09:00:00']);
     Itp::factory()->for($user)->create(['title' => 'The quiet yes', 'created_at' => '2026-11-12 09:00:00']);
@@ -86,15 +89,28 @@ it('lists the user\'s own ITPs, newest first, marking the one they live with', f
         ->withQueryParams(['tab' => 'personal'])
         ->test(Library::class)
         ->assertSeeInOrder([
-            'The quiet yes',
-            'Made from your words · 12 November</span>',
+            '<span class="lrow__name">The quiet yes</span>',
+            '<span class="lrow__side">3 min</span>',
             'href="/itps/'.$older->id.'" data-transition="forward"',
-            'The studio is open',
-            'Made from your words · 2 November · living with</span>',
+            '<span class="lrow__name">The studio is open</span>',
+            '<span class="lrow__side">your ITP</span>',
             'href="/itps/create" data-transition="forward" class="btn btn--ghost">Make a new personal ITP',
             'about ten minutes',
         ], escape: false)
+        ->assertDontSee('Made from your words ·')
         ->assertDontSee('Someone else’s ITP');
+});
+
+it('marks the universal ITP a guest chose on this device', function () {
+    UniversalItp::factory()->preview()->create(['slug' => 'awaken-wonder', 'short_name' => 'Awaken Wonder', 'sort_order' => 1]);
+    UniversalItp::factory()->preview()->create(['short_name' => 'Healing', 'sort_order' => 2]);
+
+    Livewire::withCookie(GuestChoice::COOKIE, 'awaken-wonder')
+        ->test(Library::class)
+        ->assertSeeInOrder([
+            'Awaken Wonder', '<span class="lrow__side">your ITP</span>',
+            'Healing', '<span class="lrow__side">3 min</span>',
+        ], escape: false);
 });
 
 it('keeps the tab in the URL', function () {

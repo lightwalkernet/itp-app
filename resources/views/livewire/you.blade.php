@@ -15,7 +15,7 @@
             @if ($livingWithUrl !== null)
                 <x-row href="{{ $livingWithUrl }}" :meta="$livingWithName.' · change'">Living with</x-row>
             @else
-                <x-row meta="coming soon" aria-disabled="true">Living with</x-row>
+                <x-row href="{{ route('itps.index', absolute: false) }}" meta="none yet · choose">Living with</x-row>
             @endif
         </div>
 

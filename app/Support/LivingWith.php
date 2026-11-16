@@ -3,27 +3,26 @@
 namespace App\Support;
 
 use Itp\Core\Enums\LivingWithType;
+use Itp\Core\Enums\UniversalItpKind;
 use Itp\Core\Models\Itp;
 use Itp\Core\Models\UniversalItp;
 use Itp\Core\Models\User;
 
 /**
- * The one ITP a person lives with (docs/design/what-we-ask.md). Until they choose, and for guests,
- * it is Meet Your ITP Self. Null means that piece isn't in the content yet: show it as coming soon,
- * never another ITP in its place.
+ * The one ITP a person lives with (docs/design/what-we-ask.md), until they change it: the
+ * user's choice in their settings, or a guest's on this device (GuestChoice). Null until one
+ * is chosen; Today then asks them to choose.
  */
 final class LivingWith
 {
-    public const string DEFAULT_SLUG = 'meet-your-itp-self';
+    /**
+     * A base piece that can be lived with, for the first few days.
+     */
+    public const string MEET_YOUR_ITP_SELF = 'meet-your-itp-self';
 
     public static function for(?User $user): UniversalItp|Itp|null
     {
-        return $user?->settings?->livingWith() ?? self::default();
-    }
-
-    public static function default(): ?UniversalItp
-    {
-        return UniversalItp::query()->where('slug', self::DEFAULT_SLUG)->first();
+        return $user === null ? GuestChoice::get() : $user->settings?->livingWith();
     }
 
     public static function is(?User $user, UniversalItp|Itp $itp): bool
@@ -31,6 +30,17 @@ final class LivingWith
         $current = self::for($user);
 
         return $current !== null && $current::class === $itp::class && $current->getKey() === $itp->getKey();
+    }
+
+    /**
+     * A person's own ITPs, the Universals and Meet Your ITP Self. Not a primer (for a moment,
+     * not a day), and not the other base pieces such as the Introduction.
+     */
+    public static function canBeLivedWith(UniversalItp|Itp $itp): bool
+    {
+        return $itp instanceof Itp
+            || $itp->kind === UniversalItpKind::Universal
+            || $itp->slug === self::MEET_YOUR_ITP_SELF;
     }
 
     /**

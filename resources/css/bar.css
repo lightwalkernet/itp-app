@@ -1,30 +1,40 @@
 /*
- * The bar (docs/design/direction.md "Navigation"): Today · Return · ITPs · You.
+ * The bar (docs/design/direction.md "Navigation"): the original app's floating glass pill. Your
+ * ITPs left, the logo raised in the centre for Today, You right.
  *
  * Persisted in the layout (@persist('tabbar')), so it never re-renders; its colour follows the
  * tokens in tokens.css, which follow html[data-phase] and html[data-room]. Pages that are places
  * you are *in* (the player, Breathe 11, the Why, the making, the beginning) put data-bar="hidden"
  * on their root; rooms.js copies that to <html> and the bar slides away.
  *
- * transitions.css already positions .app-tabbar fixed at the bottom and sizes --tabbar-height.
+ * transitions.css names the bar for view transitions and pads the page by --tabbar-height: the
+ * pill (64px), the gap under it (16px) and the half of the logo that rises above it (32px).
+ * Nothing here animates in CSS, only transitions (docs/architecture/field-persistence.md).
  */
 
 :root {
-    --tabbar-height: 64px;
+    --tabbar-height: 112px;
 }
 
 .app-tabbar {
+    position: fixed;
+    inset: auto 0 calc(16px + env(safe-area-inset-bottom)) 0;
+    z-index: 4;
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    align-items: stretch;
-    padding-left: max(8px, env(safe-area-inset-left));
-    padding-right: max(8px, env(safe-area-inset-right));
+    grid-template-columns: 1fr 96px 1fr;
+    align-items: center;
+    width: min(420px, calc(100% - 32px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+    height: 64px;
+    margin-inline: auto;
+    padding: 0 16px;
+    box-sizing: border-box;
+    border-radius: 999px;
     background: var(--bar-bg);
-    border-top: 1px solid var(--bar-edge);
-    -webkit-backdrop-filter: blur(20px) saturate(1.2);
-    backdrop-filter: blur(20px) saturate(1.2);
+    border: 1px solid var(--bar-edge);
+    box-shadow: 0 8px 28px rgba(10, 8, 20, 0.12);
+    -webkit-backdrop-filter: blur(12px) saturate(1.2);
+    backdrop-filter: blur(12px) saturate(1.2);
     color: var(--bar-ink-soft);
-    font-family: var(--font-display);
     transition:
         background 0.6s ease,
         border-color 0.6s ease,
@@ -33,86 +43,78 @@
 }
 
 :root[data-bar="hidden"] .app-tabbar {
-    transform: translateY(110%);
+    transform: translateY(calc(100% + 64px + env(safe-area-inset-bottom)));
+    pointer-events: none;
 }
 
-.app-tabbar a,
-.app-tabbar button {
-    appearance: none;
-    background: none;
-    border: 0;
-    padding: 6px 0;
-    display: grid;
-    justify-items: center;
-    align-content: center;
-    gap: 3px;
-    line-height: 1.1;
-    text-align: center;
-    font: inherit;
-    font-size: 14px;
-    font-style: italic;
+.app-tabbar a {
+    flex: none;
+    line-height: 1;
     color: inherit;
-    cursor: pointer;
     text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
-.app-tabbar svg {
+/* The list and the person: 48px round targets, lit when current (the original's white/30) */
+.app-tabbar__side {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    justify-self: center;
+    border-radius: 999px;
+    transition: background 0.5s ease, color 0.5s ease;
+}
+.app-tabbar__side--start { grid-column: 1; }
+.app-tabbar__side--end { grid-column: 3; }
+
+.app-tabbar__side svg {
     width: 24px;
     height: 24px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.4;
-    stroke-linecap: round;
-    stroke-linejoin: round;
 }
 
-.app-tabbar [aria-current="page"],
-.app-tabbar [aria-expanded="true"] {
+.app-tabbar__side[aria-current="page"] {
     color: var(--bar-ink);
-    font-style: normal;
+    background: var(--bar-edge);
 }
 
-.app-tabbar [aria-current="page"] svg,
-.app-tabbar [aria-expanded="true"] svg {
-    stroke-width: 1.8;
+/* The logo, raised: a 96px box centred on the pill's top edge, so half of it rises above.
+   Always in the bar's full ink: it is the mark, not a dimmed tab. */
+.app-tabbar .app-tabbar__logo {
+    position: absolute;
+    top: -48px;
+    left: 50%;
+    width: 96px;
+    height: 96px;
+    margin-left: -48px;
+    color: var(--bar-ink);
 }
 
-.app-tabbar a:focus-visible,
-.app-tabbar button:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: -4px;
-    border-radius: 12px;
-}
-
-/* ---------- the Return sheet ---------- */
-
-.return-scrim {
-    position: fixed;
+.app-tabbar__logo svg {
+    position: absolute;
     inset: 0;
-    z-index: 5;
-    background: rgba(10, 8, 20, 0.3);
+    width: 100%;
+    height: 100%;
 }
 
-.return-sheet {
-    position: fixed;
-    z-index: 6;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: var(--paper);
-    color: var(--card-ink);
-    border-radius: 28px 28px 0 0;
-    padding: 22px 24px calc(24px + env(safe-area-inset-bottom));
-    box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.25);
-    font-family: var(--font-display);
+.app-tabbar__glow {
+    color: var(--glow);
+    filter: blur(4px);
+    opacity: 0;
+    transition: opacity 0.6s ease;
 }
 
-/* Alpine x-transition classes for the sheet */
-.return-sheet-enter { transition: transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); }
-.return-sheet-enter-start { transform: translateY(110%); }
-.return-sheet-leave { transition: transform 0.35s ease-in; }
-.return-sheet-leave-end { transform: translateY(110%); }
-.return-scrim-enter { transition: opacity 0.4s ease; }
-.return-scrim-enter-start { opacity: 0; }
-.return-scrim-leave { transition: opacity 0.3s ease; }
-.return-scrim-leave-end { opacity: 0; }
+.app-tabbar__logo[aria-current="page"] .app-tabbar__glow {
+    opacity: 1;
+}
+
+/* In a white room the raised half sits over the page's text: a paper halo keeps it apart. */
+:root[data-room="white"] .app-tabbar__mark {
+    filter: drop-shadow(0 0 6px var(--paper)) drop-shadow(0 0 2px var(--paper));
+}
+
+.app-tabbar a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 999px;
+}

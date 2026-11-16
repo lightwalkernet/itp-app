@@ -1,26 +1,23 @@
 {{--
     Today (brief 1 §3). A light room. The card renders for the server's guess at the hour, then
     itpSyncClock() (resources/js/clock.js) sends the device's clock if the guess was wrong.
-    Actions that move on (Enter, Keep) dispatch today-navigate, so the page slides like a link.
+    Enter and Breathe 11 open the player ($play); Enter brings them back here, the day entered.
+    Until an ITP is chosen there is nothing to live with yet, so the card asks them to choose.
 --}}
 @php
-    $soon = $itpUrl === null;
     $prompt = fn (string $kind): string => route('today.prompt', $kind, absolute: false);
 @endphp
 <div data-room="light" class="page-center today"
      wire:init="refresh"
      x-data
-     x-init="itpSyncClock($wire)"
-     x-on:today-navigate.window="window.pageTransitions ? window.pageTransitions[$event.detail.direction]($event.detail.url) : Livewire.navigate($event.detail.url)">
+     x-init="itpSyncClock($wire)">
     <header class="col">
-        <p class="living">
-            <span>Living with</span>
-            @if ($soon)
-                <span class="living__name">{{ $itpName }}</span>
-            @else
+        @if ($itpUrl !== null)
+            <p class="living">
+                <span>Living with</span>
                 <a class="living__name" href="{{ $itpUrl }}" data-transition="forward">{{ $itpName }}</a>
-            @endif
-        </p>
+            </p>
+        @endif
         <svg class="arc" viewBox="0 0 400 64" role="img" aria-label="The day’s rhythm">
             <path class="arc__path" d="M 12 54 Q 200 -20 388 54"/>
             <circle @class(['arc__sun', 'arc__sun--hidden' => ! $arc['sunVisible']]) r="5" cx="{{ $arc['sunX'] }}" cy="{{ $arc['sunY'] }}"/>
@@ -34,54 +31,37 @@
             <p @class(['t-body', 't-soft' => $card['quote']])>{{ $card['line'] }}</p>
 
             @switch($card['state'])
+                @case('choose')
+                    <x-button :href="$links['itps']">Your ITPs</x-button>
+                    @guest
+                        <a class="btn-sec" href="{{ $links['signIn'] }}" data-transition="forward">Sign in — <em>email and a code</em></a>
+                    @endguest
+                    @break
+
                 @case('guest')
-                    @if ($soon)
-                        <x-button disabled meta="coming soon">Enter</x-button>
-                    @else
-                        <x-button :href="$itpUrl">Enter</x-button>
-                    @endif
+                    <x-button :href="$play['enter']">Enter</x-button>
                     <a class="btn-sec" href="{{ $links['signIn'] }}" data-transition="forward">Sign in — <em>email and a code</em></a>
                     @break
 
                 @case('morning-enter')
-                    {{-- brief 2: Enter goes to the player, and the play record replaces the session flag. --}}
-                    @if ($soon)
-                        <x-button disabled meta="coming soon">Enter</x-button>
-                    @else
-                        <x-button wire:click="enter">Enter</x-button>
-                    @endif
+                    <x-button :href="$play['enter']">Enter</x-button>
                     <a class="btn-sec" href="{{ $links['itps'] }}" data-transition="forward">Something else today? <em>Your ITPs</em></a>
                     @break
 
                 @case('morning-ask')
                     <x-button :href="$prompt('morning')">Begin</x-button>
-                    {{-- brief 2: Breathe 11 --}}
-                    @if ($soon)
-                        <button type="button" class="btn-sec" disabled>Or sit a moment longer — <em>Breathe 11</em> · coming soon</button>
-                    @else
-                        <a class="btn-sec" href="{{ $itpUrl }}" data-transition="forward">Or sit a moment longer — <em>Breathe 11</em> · 2 min</a>
-                    @endif
+                    <a class="btn-sec" href="{{ $play['breathe'] }}" data-transition="forward">Or sit a moment longer — <em>Breathe 11</em> · 2 min</a>
                     @break
 
                 @case('morning-kept')
-                    {{-- brief 2: Breathe 11 --}}
-                    @if ($soon)
-                        <x-button disabled meta="coming soon">Breathe 11</x-button>
-                    @else
-                        <x-button :href="$itpUrl">Breathe 11 · 2 min</x-button>
-                    @endif
+                    <x-button :href="$play['breathe']">Breathe 11 · 2 min</x-button>
                     <a class="btn-sec" href="{{ $prompt('step') }}" data-transition="forward">Add one aligned step, if you wish</a>
                     @break
 
                 @case('afternoon-return')
                 @case('afternoon-why')
-                    {{-- brief 2: Breathe 11 and Return to Coherence open in the player. --}}
                     <div class="rows">
-                        @if ($soon)
-                            <x-row disabled meta="coming soon">Breathe 11</x-row>
-                        @else
-                            <x-row :href="$itpUrl" :meta="$itpName.' · 2 min'">Breathe 11</x-row>
-                        @endif
+                        <x-row :href="$play['breathe']" :meta="$itpName.' · 2 min'">Breathe 11</x-row>
                         @if ($returnUrl === null)
                             <x-row disabled meta="coming soon">Return to Coherence</x-row>
                         @else
@@ -98,18 +78,12 @@
 
                 @case('evening-evidence')
                     <x-button :href="$prompt('evidence')">Add to the record</x-button>
-                    @if (! $soon)
-                        <button type="button" class="btn-sec" wire:click="enter">Or enter — <em>{{ $itpName }}</em> · 3 min</button>
-                    @endif
+                    <a class="btn-sec" href="{{ $play['enter'] }}" data-transition="forward">Or enter — <em>{{ $itpName }}</em> · 3 min</a>
                     @break
 
                 @case('complete')
                 @case('night-done')
-                    @if ($soon)
-                        <x-button disabled meta="coming soon">Enter</x-button>
-                    @else
-                        <x-button wire:click="enter">{{ $card['state'] === 'complete' ? 'Enter — '.$itpName : 'Enter' }}</x-button>
-                    @endif
+                    <x-button :href="$play['enter']">{{ $card['state'] === 'complete' ? 'Enter — '.$itpName : 'Enter' }}</x-button>
                     {{-- brief 4: the record --}}
                     <a class="btn-sec" href="{{ $links['record'] }}" data-transition="forward">Open <em>your record</em></a>
                     @break

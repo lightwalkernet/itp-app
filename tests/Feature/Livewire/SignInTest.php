@@ -2,9 +2,13 @@
 
 use App\Auth\TokenStore;
 use App\Livewire\SignIn;
+use App\Support\GuestChoice;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Http;
+use Itp\Core\Enums\LivingWithType;
+use Itp\Core\Models\UniversalItp;
 use Itp\Core\Models\User;
 use Itp\Core\Models\UserSetting;
 use Livewire\Livewire;
@@ -77,6 +81,43 @@ it('leaves the settings to the shared database on the web', function () {
         ->assertRedirect(route('home'));
 
     expect($settings->fresh()->why_at)->toBe('14:30:00');
+});
+
+it('makes the ITP chosen as a guest the user\'s own at sign-in, then forgets the guest\'s', function () {
+    $user = User::factory()->create(['email' => 'ann@example.com']);
+    $settings = UserSetting::factory()->for($user)->create();
+    $itp = UniversalItp::factory()->preview()->create(['slug' => 'awaken-wonder']);
+    Http::fake(['api.itp.test/v1/auth/verify-code' => signedInResponse($user, false)]);
+
+    Livewire::withCookie(GuestChoice::COOKIE, 'awaken-wonder')
+        ->test(SignIn::class)
+        ->set('email', 'ann@example.com')
+        ->set('code', '123456')
+        ->call('verifyCode')
+        ->assertRedirect(route('home'));
+
+    expect($settings->fresh())
+        ->living_with_type->toBe(LivingWithType::Universal)
+        ->living_with_id->toBe($itp->id);
+    expect(Cookie::queued(GuestChoice::COOKIE)?->isCleared())->toBeTrue();
+});
+
+it('keeps what a user already lives with over a guest\'s choice at sign-in', function () {
+    $user = User::factory()->create(['email' => 'ann@example.com']);
+    $own = UniversalItp::factory()->create();
+    $settings = UserSetting::factory()->for($user)->livingWith($own)->create();
+    UniversalItp::factory()->preview()->create(['slug' => 'awaken-wonder']);
+    Http::fake(['api.itp.test/v1/auth/verify-code' => signedInResponse($user, false)]);
+
+    Livewire::withCookie(GuestChoice::COOKIE, 'awaken-wonder')
+        ->test(SignIn::class)
+        ->set('email', 'ann@example.com')
+        ->set('code', '123456')
+        ->call('verifyCode')
+        ->assertRedirect(route('home'));
+
+    expect($settings->fresh()->living_with_id)->toBe($own->id);
+    expect(Cookie::queued(GuestChoice::COOKIE)?->isCleared())->toBeTrue();
 });
 
 it('sends a user without a first name to the profile screen', function () {

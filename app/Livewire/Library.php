@@ -18,7 +18,8 @@ use Livewire\Attributes\Url;
 use Livewire\Component;
 
 /**
- * Your ITPs (brief 1 §4): everything a person can enter, in three tabs. Universal is every
+ * Your ITPs (brief 1 §4): everything a person can enter, in three tabs, by short name only (a
+ * personal ITP by its title), the one they live with marked. Universal is every
  * universal ITP (guests see the non-previews locked; the page itself handles the lock), Personal
  * is the user's own (guests are invited to sign in), Primers are the short pieces for a moment.
  * The tab is kept in the URL. On the phone, signed in, missing audio downloads one file per poll.
@@ -115,7 +116,7 @@ class Library extends Component
      * The named primers first (a real row when it exists, else coming soon), then any other.
      *
      * @param  Collection<int, UniversalItp>  $primers
-     * @return list<array{name: string, meta: string, itp: UniversalItp|null}>
+     * @return list<array{name: string, meta: string|null, itp: UniversalItp|null}>
      */
     protected function primerRows(Collection $primers): array
     {
@@ -131,7 +132,7 @@ class Library extends Component
 
         $others = $primers
             ->reject(fn (UniversalItp $itp): bool => array_key_exists($itp->slug, self::PRIMERS))
-            ->map(fn (UniversalItp $itp): array => ['name' => $itp->display_name, 'meta' => $itp->title, 'itp' => $itp]);
+            ->map(fn (UniversalItp $itp): array => ['name' => $itp->display_name, 'meta' => null, 'itp' => $itp]);
 
         return $named->values()->concat($others->values())->all();
     }
